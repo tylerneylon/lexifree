@@ -96,33 +96,58 @@ def is_ai_defn_good(word, ai_defn, wiki_defns):
         return False
     return int(c)
 
-def run_auto_evals(test_file):
+def load_data(test_file):
+    ''' This loads in test words from test_file (assumed to be a json file, with
+        one json string per line), as well as the corresponding ai-made entries
+        from entries.json.
 
+        This returns the triple: gpt_data, gpt_errors, wiki_data.
+        * gpt_data[word]   = <gpt entry for that word>
+        * gpt_errors[word] = <error message for that word>
+        * wiki_data[word]  = [list of wiki defns for that word]
+
+        This also trims wiki_data to only keep the first-listed 100 words that
+        are in gpt_data.
+    '''
     assert test_file.endswith('.json')
 
     # Load in the AI-based entries.
     gpt_data = {}
-    error_words = {}
+    gpt_errors = {}
     with open('entries.json') as f:
         for line in f:
             data = json.loads(line)
             word = data['word']
             if 'error' in data:
-                error_words[word] = data['error']
+                gpt_errors[word] = data['error']
             else:
                 gpt_data[word] = data['entry']
 
     # Load in the test entries.
     wiki_data = {}
+    wiki_words = []  # Track the order of the words.
     with open(test_file) as f:
         for line in f:
             data = json.loads(line)
             word  = data['word']
             defns = data['wiktionary_definitions']
             wiki_data[word] = defns
+            wiki_words.append(word)
 
-    # TODO Factor out data loading and a filtering step where we
-    #      narrow down to the first 100 non-error words.
+    # Reduce the word set down to the first 100 error-free words.
+    keep = set()
+    for word in wiki_words:
+        if word in gpt_data:
+            keep.add(word)
+        if len(keep) == 100:
+            break
+    wiki_data = {w: value for w, value in wiki_data.items() if w in keep}
+
+    return gpt_data, gpt_errors, wiki_data
+
+def run_auto_evals(test_file):
+
+    gpt_data, gpt_errors, wiki_data = load_data(test_file)
 
     eval_results = {}
 
@@ -131,10 +156,7 @@ def run_auto_evals(test_file):
     # many more words than wiki_data, and we should ignore the extras.
     words = list(wiki_data.keys())[:2]
     for word in words:
-        if word in error_words:
-            error = error_words[word]
-            print(f'Skipping "{word}" due to error: {error}')
-            continue
+        assert word not in gpt_errors
         wiki_defns = wiki_data[word]
         ai_defn_results = []
         for ai_defn in gpt_data[word]['definitions']:

@@ -9,3 +9,4 @@ __pycache__/
 _tmp/
 test*.json
 .latest.txt
+_scratch/
