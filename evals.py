@@ -38,8 +38,10 @@
 
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from openai import OpenAI
+from tqdm import tqdm
 
 
 # ______________________________________________________________________
@@ -63,9 +65,9 @@ def get_gpt4o_response(prompt):
 check_defn_prompt = '''
     Here are the official definitions for a particular word:
 
-    $WIKI_DEFNS$
+    $GIVEN_DEFNS$
 
-    And here is an student's definition: "$AI_DEFN$"
+    And here is an student's definition: "$DEFN$"
 
     Does the student's definition fit one of the official definitions above?
     If yes, answer with the number of the matching definition.
@@ -73,19 +75,19 @@ check_defn_prompt = '''
     Answer only with a number or the word no; no other words or marks at all.
 '''
 
-def is_ai_defn_good(word, ai_defn, wiki_defns):
-    ''' This expects three strings: a word, an ai definition, and a
-        list of wiktionary definitions. This returns False if the ai definition
-        is not in line with one of the wiki definitions; otherwise it returns an
-        integer, which is the index of the matching wiki definition.'''
-    wiki_defns = '\n'.join([
+def is_defn_good(defn, given_defns):
+    ''' This expects `defn` to be a string, and given_defns to be a list of
+        strings. This checks to see if `defn` matches one of the given defns.
+        This returns False if `defn` is not in line with one of the given
+        definitions; otherwise it returns an integer, which is the index of the
+        matching given definition.'''
+    given_defns = '\n'.join([
         f'{i}. {defn}'
-        for i, defn in enumerate(wiki_defns)
+        for i, defn in enumerate(given_defns)
     ])
     subs = {
-        '$WORD$': word,
-        '$WIKI_DEFNS$': wiki_defns,
-        '$AI_DEFN$': ai_defn
+        '$GIVEN_DEFNS$': given_defns,
+        '$DEFN$': defn
     }
     prompt = check_defn_prompt
     for key, value in subs.items():
@@ -95,6 +97,10 @@ def is_ai_defn_good(word, ai_defn, wiki_defns):
     if c.lower() == 'no':
         return False
     return int(c)
+
+def do_ai_defn_check(word, defn_idx, defn, wiki_defns):
+    result = is_defn_good(defn, wiki_defns)
+    return {'word': word, 'ai_defn': defn_idx, 'matches': result}
 
 def load_data(test_file):
     ''' This loads in test words from test_file (assumed to be a json file, with
@@ -149,22 +155,28 @@ def run_auto_evals(test_file):
 
     gpt_data, gpt_errors, wiki_data = load_data(test_file)
 
-    eval_results = {}
-
     # Check the accuracy of all the AI-based definitions that
     # correspond to test words. Keep in mind that gpt_data may contain
     # many more words than wiki_data, and we should ignore the extras.
-    words = list(wiki_data.keys())[:2]
-    for word in words:
-        assert word not in gpt_errors
-        wiki_defns = wiki_data[word]
-        ai_defn_results = []
-        for ai_defn in gpt_data[word]['definitions']:
-            is_ok = is_ai_defn_good(word, ai_defn['definition'], wiki_defns)
-            ai_defn_results.append(is_ok)
-        eval_results[word] = ai_defn_results
+    words = list(wiki_data.keys())[:2]  # XXX
 
-    print(json.dumps(eval_results))
+    total = sum(len(gpt_data[w]['definitions']) for w in words)
+    pbar = tqdm(total=total, file=sys.stderr)
+    futures = []
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for word in words:
+            assert word not in gpt_errors
+            wiki_defns = wiki_data[word]
+            for i, ai_defn in enumerate(gpt_data[word]['definitions']):
+                futures.append(executor.submit(
+                    do_ai_defn_check, word, i, ai_defn['definition'], wiki_defns
+                ))
+        for future in as_completed(futures):
+            eval_result = future.result()
+            pbar.update(1)
+            word = eval_result['word']
+            pbar.set_description(f'{word:20s}')
+            print(json.dumps(eval_result))
 
 
 # ______________________________________________________________________
