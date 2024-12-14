@@ -68,13 +68,20 @@ check_defn_prompt = '''
     And here is an student's definition: "$AI_DEFN$"
 
     Does the student's definition fit one of the official definitions above?
-    Only answer with a yes or no, no quote marks or any other words or marks.
+    If yes, answer with the number of the matching definition.
+    If no, answer with the word no.
+    Answer only with a number or the word no; no other words or marks at all.
 '''
 
 def is_ai_defn_good(word, ai_defn, wiki_defns):
-    ''' This expects three strings: a word, an ai definition, and a stringified
-        list of wiktionary definitions. This returns True iff the ai definition
-        is deemed (by AI) to be in line with one of the wiki definitions. '''
+    ''' This expects three strings: a word, an ai definition, and a
+        list of wiktionary definitions. This returns False if the ai definition
+        is not in line with one of the wiki definitions; otherwise it returns an
+        integer, which is the index of the matching wiki definition.'''
+    wiki_defns = '\n'.join([
+        f'{i}. {defn}'
+        for i, defn in enumerate(wiki_defns)
+    ])
     subs = {
         '$WORD$': word,
         '$WIKI_DEFNS$': wiki_defns,
@@ -84,7 +91,10 @@ def is_ai_defn_good(word, ai_defn, wiki_defns):
     for key, value in subs.items():
         prompt = prompt.replace(key, value)
     c = get_gpt4o_response(prompt)
-    return c.choices[0].message.content.lower() == 'yes'
+    c = c.choices[0].message.content
+    if c.lower() == 'no':
+        return False
+    return int(c)
 
 def run_auto_evals(test_file):
 
@@ -125,7 +135,7 @@ def run_auto_evals(test_file):
             error = error_words[word]
             print(f'Skipping "{word}" due to error: {error}')
             continue
-        wiki_defns = '\n'.join(wiki_data[word])
+        wiki_defns = wiki_data[word]
         ai_defn_results = []
         for ai_defn in gpt_data[word]['definitions']:
             is_ok = is_ai_defn_good(word, ai_defn['definition'], wiki_defns)
