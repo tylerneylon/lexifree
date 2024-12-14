@@ -55,7 +55,6 @@ from tqdm import tqdm
 
 VERSION = '0.1'
 
-gpt_cost = 0
 PROMPT_TOKEN_COST = (2.5 / 1e6)     # That's $2.5 / 1m tokens.
 COMPLETION_TOKEN_COST = (10 / 1e6)  # That's $ 10 / 1m tokens.
 
@@ -80,13 +79,12 @@ def load_wordlist():
 # ______________________________________________________________________
 # OpenAI API Utilities
 
-def get_gpt4o_response(prompt):
+def get_gpt4o_response(prompt, cost=None):
     ''' Fetches a response from GPT-4o using the OpenAI API.
         Returns the response (a completion objection) from gpt-4o for the given
         `prompt`. If there's an error, an error message (a string) is returned
         instead.
     '''
-    global gpt_cost
     try:
         completion = client.chat.completions.create(
             model='gpt-4o',
@@ -96,10 +94,11 @@ def get_gpt4o_response(prompt):
                 {'role': 'user', 'content': prompt}
             ]
         )
-        gpt_cost += (
-                completion.usage.prompt_tokens * PROMPT_TOKEN_COST +
-                completion.usage.completion_tokens * COMPLETION_TOKEN_COST
-        )
+        if cost:
+            cost['cost'] += (
+                    completion.usage.prompt_tokens * PROMPT_TOKEN_COST +
+                    completion.usage.completion_tokens * COMPLETION_TOKEN_COST
+            )
         return completion
     except Exception as e:
         print(e)
@@ -121,10 +120,11 @@ def parse_json_from_reply(reply):
 # ______________________________________________________________________
 # Dictionary-specific LLM functions
 
-def is_english_word(word):
+def is_english_word(word, cost):
     c = get_gpt4o_response(
             f'Is "{word}" a word in English language? ' + 
-            'Answer with only a yes or a no.'
+            'Answer with only a yes or a no.',
+            cost
     )
     reply = c.choices[0].message.content
     return 'yes' in reply.lower()
@@ -145,9 +145,9 @@ dictionary_entry_prompt_template = '''
     other text.
 '''
 
-def get_dictionary_entry(word):
+def get_dictionary_entry(word, cost):
     prompt = dictionary_entry_prompt_template.replace('$WORD$', word)
-    c = get_gpt4o_response(prompt)
+    c = get_gpt4o_response(prompt, cost)
     return c.choices[0].message.content
 
 poetic_prompt_template = '''
@@ -170,12 +170,12 @@ poetic_prompt_template = '''
     Please reply only with a JSON string, no other text.
 '''
 
-def add_poetic_definitions(json_entry):
+def add_poetic_definitions(json_entry, cost):
     word = json_entry['word']
     defns = json.dumps(json_entry['definitions'])
     prompt = poetic_prompt_template.replace('$WORD$', word)
     prompt = prompt.replace('$DEFN$', defns)
-    c = get_gpt4o_response(prompt)
+    c = get_gpt4o_response(prompt, cost)
     return c.choices[0].message.content
 
 def log_entry_for_word(word, f):
@@ -185,25 +185,27 @@ def log_entry_for_word(word, f):
         * {'word', 'base_word'} OR
         * {'word', 'entry'}
 
-        Returns True on success and False if there was any problem.
+        Returns the word, which can be convenient when calling this function as
+        part of a threading pool.
     '''
-    global gpt_cost
 
     log_entry = {'word': word, 'version': VERSION}
+    gpt_cost  = {'cost': 0}
 
-    gpt_cost = 0
-    def finish(return_value):
-        log_entry['cost'] = gpt_cost
+    # Currently the code ignores is_ok, but you can add that back in if you'd
+    # like (as part of a return value).
+    def finish(is_ok):
+        log_entry['cost'] = gpt_cost['cost']
         f.write(json.dumps(log_entry) + '\n')
-        return return_value
+        return word
 
     # Check to see if this is a valid English word.
-    if not is_english_word(word):
+    if not is_english_word(word, gpt_cost):
         log_entry['error'] = 'not an English word'
         return finish(False)
 
     # Get the initial entry.
-    reply = get_dictionary_entry(word)
+    reply = get_dictionary_entry(word, gpt_cost)
     entry = parse_json_from_reply(reply)
 
     if False:
@@ -217,7 +219,7 @@ def log_entry_for_word(word, f):
     log_entry['entry'] = entry
 
     # Add poetic definitions.
-    reply = add_poetic_definitions(entry)
+    reply = add_poetic_definitions(entry, gpt_cost)
     poetic_json = parse_json_from_reply(reply)
 
     if False:
@@ -276,12 +278,23 @@ if __name__ == '__main__':
     # Set up the OpenAI client connection.
     client = OpenAI()
 
+    # If there's only one word, don't be fancy about it.
+    pbar = None
+    if len(words) == 1:
+        with open('entries.json', 'a') as f:
+            log_entry_for_word(words[0], f)
+        sys.exit(0)
+
     # Get dictionary data for the given words.
-    if len(words) > 1:
-        pbar = tqdm(total=len(words), file=sys.stderr)
+    pbar = tqdm(total=len(words), file=sys.stderr)
     with open('entries.json', 'a') as f:
-        for word in words:
-            pbar.set_description(word)
-            # print(f'Building the entry for "{word}"')
-            log_entry_for_word(word, f)
-            pbar.update(1)
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            futures = [
+                    executor.submit(log_entry_for_word, word, f)
+                    for word in words
+            ]
+            for future in as_completed(futures):
+                word = future.result()
+                pbar.update(1)
+                pbar.set_description(word)
+    pbar.set_description('Done')
