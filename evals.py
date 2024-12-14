@@ -158,7 +158,7 @@ def run_auto_evals(test_file):
     # Check the accuracy of all the AI-based definitions that
     # correspond to test words. Keep in mind that gpt_data may contain
     # many more words than wiki_data, and we should ignore the extras.
-    words = list(wiki_data.keys())[:2]  # XXX
+    words = list(wiki_data.keys())[:20]  # XXX
 
     total = sum(len(gpt_data[w]['definitions']) for w in words)
     num_mistakes = 0
@@ -186,6 +186,7 @@ def run_auto_evals(test_file):
 
             print(json.dumps(eval_result))
 
+    pbar.set_description('Done')
     pbar.close()
 
     accuracy = (total - num_mistakes) / total
