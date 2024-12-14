@@ -10,3 +10,4 @@ _tmp/
 test*.json
 .latest.txt
 _scratch/
+_tmp*

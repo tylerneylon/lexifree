@@ -161,7 +161,10 @@ def run_auto_evals(test_file):
     words = list(wiki_data.keys())[:2]  # XXX
 
     total = sum(len(gpt_data[w]['definitions']) for w in words)
+    num_mistakes = 0
+
     pbar = tqdm(total=total, file=sys.stderr)
+
     futures = []
     with ThreadPoolExecutor(max_workers=20) as executor:
         for word in words:
@@ -176,7 +179,17 @@ def run_auto_evals(test_file):
             pbar.update(1)
             word = eval_result['word']
             pbar.set_description(f'{word:20s}')
+
+            # This needs to be "is" because "0 == False" is True in Python.
+            if eval_result['matches'] is False:
+                num_mistakes += 1
+
             print(json.dumps(eval_result))
+
+    pbar.close()
+
+    accuracy = (total - num_mistakes) / total
+    print(f'AI defn accuracy: {accuracy * 100:.2f}%', file=sys.stderr)
 
 
 # ______________________________________________________________________
