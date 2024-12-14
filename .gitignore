@@ -1,0 +1,10 @@
+*.csv
+*.mp3
+entries.json
+html/
+.DS_Store
+.ipynb_checkpoints/
+index.html
+__pycache__/
+_tmp/
+test*.json
