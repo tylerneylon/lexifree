@@ -43,13 +43,17 @@ if __name__ == '__main__':
             start_line = int(f.read())
 
     cost = 0
+    num_entries = 0
     with open('entries.json') as f:
         for i, line in enumerate(f):
             if i < start_line:
                 continue
             entry = json.loads(line)
             cost += entry['cost']
+            num_entries += 1
     with latest_file.open('w') as f:
         f.write(f'{i + 1}\n')
 
-    print(f'Cost: {cost}')
+    print(f'Cost: ${cost:.2f}')
+    avg_per_thousand = cost / num_entries * 1_000
+    print(f'Average per thousand entries: ${avg_per_thousand:.2f}')
