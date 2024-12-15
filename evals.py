@@ -43,9 +43,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from openai import OpenAI
 from tqdm import tqdm
 
+import shotglass
+
 
 # ______________________________________________________________________
-# Functions
+# OpenAI API functions
 
 def get_gpt4o_response(prompt):
     try:
@@ -60,6 +62,10 @@ def get_gpt4o_response(prompt):
         return completion
     except Exception as e:
         return f"An error occurred: {e}"
+
+
+# ______________________________________________________________________
+# Evaluation functions
 
 check_defn_prompt = '''
     Here are the official definitions for a particular word:
@@ -225,6 +231,7 @@ def run_auto_evals(test_file):
     '''
 
     gpt_data, gpt_errors, wiki_data = load_data(test_file)
+    print(json.dumps({'test_file': test_file}))
 
     # Check the accuracy of all the AI-based definitions that
     # correspond to test words. Keep in mind that gpt_data may contain
@@ -248,6 +255,26 @@ def run_auto_evals(test_file):
 
 
 # ______________________________________________________________________
+# Server functions
+
+def make_page_handler():
+
+    def get_page():
+        return b'<html><body><h1>hello</h1></body></html>'
+
+    return get_page
+
+def serve_eval_interface(results_file):
+    print('Go to http://localhost/ to use the interface.')
+    print('Press ctrl-C when you\'re done to exit.')
+
+    GET_routes  = [['/', make_page_handler()]]
+    POST_routes = []
+    shotglass.register_routes(GET_routes, POST_routes)
+    shotglass.run_server()
+
+
+# ______________________________________________________________________
 # Main
 
 if __name__ == '__main__':
@@ -261,5 +288,8 @@ if __name__ == '__main__':
 
     client = OpenAI()
 
-    run_auto_evals(sys.argv[2])
+    if sys.argv[1] == 'run':
+        run_auto_evals(sys.argv[2])
+    elif sys.argv[1] == 'serve':
+        serve_eval_interface(sys.argv[2])
 
