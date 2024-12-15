@@ -58,7 +58,6 @@ def get_gpt4o_response(prompt):
             ]
         )
         return completion
-        return completion.choices[0].message
     except Exception as e:
         return f"An error occurred: {e}"
 
@@ -160,6 +159,24 @@ def load_data(test_file):
     return gpt_data, gpt_errors, wiki_data
 
 def find_defn_matches(words, needles, needle_type, haystacks):
+    ''' This expects the following three arguments to be lists whose elements
+        correspond to each other:
+        * words = the list of words being defined
+        * needles = each item is a list of defns for the corresponding word
+        * haystacks = each item is a list of defns for the corresponding word
+
+        This also accepts:
+        * needle_type = a str, describes the needles: 'ai_defn' or 'wiki_defn'
+
+        This prints out json strings in the following format; they are expected
+        to be redirected to a results file:
+            {'word': word, '{ai,wiki}_defn': <int index>, 'match': 'no'|<int>}
+        where the value of 'match' means either this needle had no match in the
+        haystack (value 'no'), or indicates which haystack defn was a match.
+
+        This returns the accuracy = the percent (in [0, 1]) of needle
+        definitions that matched a corresponding haystack definition.
+    '''
 
     def do_defn_check(word, defn_idx, defn, given_defns):
         result = is_defn_good(defn, given_defns)
@@ -201,6 +218,11 @@ def find_defn_matches(words, needles, needle_type, haystacks):
     return accuracy
 
 def run_auto_evals(test_file):
+    ''' This reads word and definition data from test_file and entries.json, and
+        then prints out json data with LLM-evaluated results on how good the
+        test_file data is. In particular, this measures definition accuracy and
+        definition coverage (similar to precision and recall).
+    '''
 
     gpt_data, gpt_errors, wiki_data = load_data(test_file)
 
@@ -230,12 +252,12 @@ def run_auto_evals(test_file):
 
 if __name__ == '__main__':
 
+    # Check the command-line arguments.
     if len(sys.argv) < 3:
         print(__doc__)
         sys.exit(0)
-
     # TEMP TODO This script is only partially implemented right now.
-    assert sys.argv[1] == 'run'
+    assert sys.argv[1] in ['run', 'serve']
 
     client = OpenAI()
 
