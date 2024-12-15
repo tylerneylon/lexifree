@@ -75,32 +75,40 @@ check_defn_prompt = '''
     Answer only with a number or the word no; no other words or marks at all.
 '''
 
+prompt_suffix = '''
+    Be sure to only answer with either a number (of the matching definition) or
+    with the word "no".
+'''
+
 def is_defn_good(defn, given_defns):
     ''' This expects `defn` to be a string, and given_defns to be a list of
         strings. This checks to see if `defn` matches one of the given defns.
         This returns False if `defn` is not in line with one of the given
         definitions; otherwise it returns an integer, which is the index of the
         matching given definition.'''
-    given_defns = '\n'.join([
-        f'{i}. {defn}'
-        for i, defn in enumerate(given_defns)
-    ])
-    subs = {
-        '$GIVEN_DEFNS$': given_defns,
-        '$DEFN$': defn
-    }
-    prompt = check_defn_prompt
-    for key, value in subs.items():
-        prompt = prompt.replace(key, value)
-    c = get_gpt4o_response(prompt)
-    c = c.choices[0].message.content
-    if c.lower() == 'no':
-        return False
-    return int(c)
+    for i in range(2):
+        given_defns = '\n'.join([
+            f'{i}. {defn}'
+            for i, defn in enumerate(given_defns)
+        ])
+        subs = {
+            '$GIVEN_DEFNS$': given_defns,
+            '$DEFN$': defn
+        }
+        prompt = check_defn_prompt
+        for key, value in subs.items():
+            prompt = prompt.replace(key, value)
+        if i > 0:
+            prompt += prompt_suffix
+        c = get_gpt4o_response(prompt)
+        c = c.choices[0].message.content
+        if c.lower() == 'no':
+            return False
+        if not all(char.isdigit() for char in c.strip()):
+            continue
+        return int(c.strip())
 
-def do_ai_defn_check(word, defn_idx, defn, wiki_defns):
-    result = is_defn_good(defn, wiki_defns)
-    return {'word': word, 'ai_defn': defn_idx, 'matches': result}
+    return ('Error: bad GPT response', c)
 
 def load_data(test_file):
     ''' This loads in test words from test_file (assumed to be a json file, with
@@ -151,28 +159,28 @@ def load_data(test_file):
 
     return gpt_data, gpt_errors, wiki_data
 
-def run_auto_evals(test_file):
+def find_defn_matches(words, needles, needle_type, haystacks):
 
-    gpt_data, gpt_errors, wiki_data = load_data(test_file)
+    def do_defn_check(word, defn_idx, defn, given_defns):
+        result = is_defn_good(defn, given_defns)
+        if type(result) is tuple:
+            print(result[0], result[1], file=sys.stderr)
+            print(f'  This is for defn {defn_idx} of "{word}"', file=sys.stderr)
+            print(f'  Artifically marking as no-match', file=sys.stderr)
+            result = False
+        return {'word': word, needle_type: defn_idx, 'match': result}
 
-    # Check the accuracy of all the AI-based definitions that
-    # correspond to test words. Keep in mind that gpt_data may contain
-    # many more words than wiki_data, and we should ignore the extras.
-    words = list(wiki_data.keys())[:20]  # XXX
-
-    total = sum(len(gpt_data[w]['definitions']) for w in words)
+    total = sum(len(defns) for defns in needles)
     num_mistakes = 0
 
     pbar = tqdm(total=total, file=sys.stderr)
 
     futures = []
     with ThreadPoolExecutor(max_workers=20) as executor:
-        for word in words:
-            assert word not in gpt_errors
-            wiki_defns = wiki_data[word]
-            for i, ai_defn in enumerate(gpt_data[word]['definitions']):
+        for word, check_defns, given_defns in zip(words, needles, haystacks):
+            for i, defn in enumerate(check_defns):
                 futures.append(executor.submit(
-                    do_ai_defn_check, word, i, ai_defn['definition'], wiki_defns
+                    do_defn_check, word, i, defn, given_defns
                 ))
         for future in as_completed(futures):
             eval_result = future.result()
@@ -181,7 +189,7 @@ def run_auto_evals(test_file):
             pbar.set_description(f'{word:20s}')
 
             # This needs to be "is" because "0 == False" is True in Python.
-            if eval_result['matches'] is False:
+            if eval_result['match'] is False:
                 num_mistakes += 1
 
             print(json.dumps(eval_result))
@@ -190,7 +198,31 @@ def run_auto_evals(test_file):
     pbar.close()
 
     accuracy = (total - num_mistakes) / total
+    return accuracy
+
+def run_auto_evals(test_file):
+
+    gpt_data, gpt_errors, wiki_data = load_data(test_file)
+
+    # Check the accuracy of all the AI-based definitions that
+    # correspond to test words. Keep in mind that gpt_data may contain
+    # many more words than wiki_data, and we should ignore the extras.
+    words = list(wiki_data.keys())
+
+    # Form two corresponding definition lists.
+    ai_defns = [
+            [defn['definition'] for defn in gpt_data[w]['definitions']]
+            for w in words
+    ]
+    wiki_defns = [wiki_data[w] for w in words]
+
+    # Check that the AI definitions are good.
+    accuracy = find_defn_matches(words, ai_defns, 'ai_defn', wiki_defns)
     print(f'AI defn accuracy: {accuracy * 100:.2f}%', file=sys.stderr)
+
+    # Check that the wiki definitions are covered.
+    coverage = find_defn_matches(words, wiki_defns, 'wiki_defn', ai_defns)
+    print(f'AI defn coverage: {coverage * 100:.2f}%', file=sys.stderr)
 
 
 # ______________________________________________________________________

@@ -11,3 +11,4 @@ test*.json
 .latest.txt
 _scratch/
 _tmp*
+results*.json
