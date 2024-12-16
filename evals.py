@@ -257,10 +257,103 @@ def run_auto_evals(test_file):
 # ______________________________________________________________________
 # Server functions
 
-def make_page_handler():
+def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
+    ai_defns = gpt_entry['definitions']
+    grid_style = f'grid-template-rows: repeat({len(ai_defns) + 1}, auto)'
+    parts = [f'<div class="grid-container" style="{grid_style}">']
+
+    def add_item(body):
+        parts.append(f'<div class="grid-item">{body}</div>')
+
+    # Column 1: The AI-based definitions.
+    parts.append(f'<div class="grid-item">{word}</div>')
+    for defn_obj in ai_defns:
+        defn = defn_obj['definition']
+        add_item(defn)
+
+    # Column 2: Taste scores.
+    parts.append(f'<div class="grid-item">Flavor Text</div>')
+    for defn_obj in ai_defns:
+        poetic_defn = '&lt;none&gt;'
+        # if word == 'shirts':
+        #     breakpoint()
+        if 'poetic_definition' in defn_obj:
+            poetic_defn = defn_obj['poetic_definition']
+        add_item(poetic_defn)
+
+    # Column 3: Accuracy.
+    parts.append(f'<div class="grid-item">Accuracy</div>')
+    for i, defn_obj in enumerate(ai_defns):
+        match = ai_matches[i]
+        text = 'no' if match is False else 'yes'
+        if not (match is False):
+            text += f'\n<p>\nto {wiki_defns[match]}'
+        add_item(text)
+
+    # Column 4: Coverage
+    n = len(wiki_defns)
+    coverage_style = {
+            'display': 'grid',
+            'grid-auto-flow': 'column',
+            'grid-template-rows': f'repeat({n}, auto)',
+            'gap': '10px',
+            'background-color': 'initial',
+            'padding': 'initial',
+            'box-shadow': 'initial'
+    }
+    style = '; '.join([x[0] + ':' + x[1] for x in coverage_style.items()])
+    parts.append(f'<div class="grid-item">Wiktionary Coverage</div>')
+    parts.append(f'<div class="grid-item" style="grid-row:2/-1;{style}">')
+    for i, wiki_defn in enumerate(wiki_defns):
+        add_item(wiki_defn)
+    parts.append('</div>')
+
+    parts.append('</div>')
+    return '\n'.join(parts)
+
+def make_eval_interface_html(results_file):
+
+    # Load in the word and definition data.
+    with open(results_file) as f:
+        first_line = next(f)
+        test_file = json.loads(first_line)['test_file']
+        results = [json.loads(line) for line in f]
+    gpt_data, gpt_errors, wiki_data = load_data(test_file)
+
+    # Load in the html template.
+    with open('templates/eval_results_template.html') as f:
+        html_template = f.read()
+
+    # Build a table per word.
+    words = {result['word'] for result in results}
+    ai_matches, wiki_matches = {}, {}
+    for result in results:
+        if 'ai_defn' in result:
+            matches = ai_matches.setdefault(result['word'], {})
+            matches[result['ai_defn']] = result['match']
+        else:
+            matches = wiki_matches.setdefault(result['word'], {})
+            matches[result['wiki_defn']] = result['match']
+    make_list = lambda x: [y[1] for y in sorted(x.items())]
+    ai_matches = { w: make_list(x) for w, x in ai_matches.items() }
+    wiki_matches = { w: make_list(x) for w, x in wiki_matches.items() }
+    table_strs = [
+            make_word_eval_table(
+                word, gpt_data[word], wiki_data[word],
+                ai_matches[word], wiki_matches[word]
+            )
+            for word in words
+    ]
+
+    # Compile and return the resulting html string.
+    html = html_template.replace('$BODY$', '\n\n'.join(table_strs))
+    return html
+
+def make_page_handler(html):
 
     def get_page():
-        return b'<html><body><h1>hello</h1></body></html>'
+        return html.encode('utf-8')
+        # return b'<html><body><h1>hello</h1></body></html>'
 
     return get_page
 
@@ -268,7 +361,9 @@ def serve_eval_interface(results_file):
     print('Go to http://localhost/ to use the interface.')
     print('Press ctrl-C when you\'re done to exit.')
 
-    GET_routes  = [['/', make_page_handler()]]
+    html = make_eval_interface_html(results_file)
+    handler = make_page_handler(html)
+    GET_routes  = [['/', handler]]
     POST_routes = []
     shotglass.register_routes(GET_routes, POST_routes)
     shotglass.run_server()
