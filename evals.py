@@ -266,17 +266,20 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
 
     parts.append(f'<div class="grid-container" style="{grid_style}">')
 
-    def add_item(body):
-        parts.append(f'<div class="grid-item">{body}</div>')
+    def add_item(body, classes=[]):
+        if type(classes) is str:
+            classes = [classes]
+        class_str = ' '.join(['grid-item'] + classes)
+        parts.append(f'<div class="{class_str}">{body}</div>')
 
     # Column 1: The AI-based definitions.
-    parts.append(f'<div class="grid-item">{word}</div>')
+    add_item(word, 'word')
     for defn_obj in ai_defns:
         defn = defn_obj['definition']
         add_item(defn)
 
     # Column 2: Taste scores.
-    parts.append(f'<div class="grid-item">Flavor Text</div>')
+    add_item('Flavor Text', 'header')
     for defn_obj in ai_defns:
         poetic_defn = '&lt;none&gt;'
         # if word == 'shirts':
@@ -286,7 +289,7 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
         add_item(poetic_defn)
 
     # Column 3: Accuracy.
-    parts.append(f'<div class="grid-item">Accuracy</div>')
+    add_item('Accuracy', 'header')
     for i, defn_obj in enumerate(ai_defns):
         match = ai_matches[i]
         text = 'no' if match is False else 'yes'
@@ -298,14 +301,14 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
     parts.append('</div>')  # End of table-left.
 
     # Column 4: Coverage.
-    # This columns is a peer with the above grid-container.
+    # This column is a peer with the above grid-container.
 
     parts.append('<div class="table-right">')
     grid_style = f'grid-template-rows: repeat({len(wiki_defns) + 1}, auto);'
     grid_style += 'grid-template-columns: 1fr;'
     parts.append(f'<div class="grid-container" style="{grid_style}">')
 
-    parts.append(f'<div class="grid-item">Wiktionary Coverage</div>')
+    add_item('Wiktionary Coverage', 'header')
     for i, wiki_defn in enumerate(wiki_defns):
         add_item(wiki_defn)
 
