@@ -260,7 +260,11 @@ def run_auto_evals(test_file):
 def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
     ai_defns = gpt_entry['definitions']
     grid_style = f'grid-template-rows: repeat({len(ai_defns) + 1}, auto)'
-    parts = [f'<div class="grid-container" style="{grid_style}">']
+    parts = ['<div class="table-holder"><div class="table-left">']
+
+    # Columns 1-3 are part of a grid-container.
+
+    parts.append(f'<div class="grid-container" style="{grid_style}">')
 
     def add_item(body):
         parts.append(f'<div class="grid-item">{body}</div>')
@@ -290,25 +294,25 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
             text += f'\n<p>\nto {wiki_defns[match]}'
         add_item(text)
 
-    # Column 4: Coverage
-    n = len(wiki_defns)
-    coverage_style = {
-            'display': 'grid',
-            'grid-auto-flow': 'column',
-            'grid-template-rows': f'repeat({n}, auto)',
-            'gap': '10px',
-            'background-color': 'initial',
-            'padding': 'initial',
-            'box-shadow': 'initial'
-    }
-    style = '; '.join([x[0] + ':' + x[1] for x in coverage_style.items()])
+    parts.append('</div>')  # End of grid-container for columns 1-3.
+    parts.append('</div>')  # End of table-left.
+
+    # Column 4: Coverage.
+    # This columns is a peer with the above grid-container.
+
+    parts.append('<div class="table-right">')
+    grid_style = f'grid-template-rows: repeat({len(wiki_defns) + 1}, auto);'
+    grid_style += 'grid-template-columns: 1fr;'
+    parts.append(f'<div class="grid-container" style="{grid_style}">')
+
     parts.append(f'<div class="grid-item">Wiktionary Coverage</div>')
-    parts.append(f'<div class="grid-item" style="grid-row:2/-1;{style}">')
     for i, wiki_defn in enumerate(wiki_defns):
         add_item(wiki_defn)
-    parts.append('</div>')
 
-    parts.append('</div>')
+    parts.append('</div>')  # End of column 4's grid-container.
+    parts.append('</div>')  # End of table-right.
+
+    parts.append('</div>')  # End of table-holder.
     return '\n'.join(parts)
 
 def make_eval_interface_html(results_file):
@@ -342,7 +346,7 @@ def make_eval_interface_html(results_file):
                 word, gpt_data[word], wiki_data[word],
                 ai_matches[word], wiki_matches[word]
             )
-            for word in words
+            for word in sorted(words)
     ]
 
     # Compile and return the resulting html string.
