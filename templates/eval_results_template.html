@@ -42,19 +42,20 @@
 
         .table-right {
             align-self: stretch;
+            border-left: 1px solid #777;
         }
 
         .grid-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(4, auto);
-            gap: 10px;
+            gap: 7px;
             grid-auto-flow: column;
         }
 
-
         .grid-item {
-            padding: 20px;
+            color: #666;
+            padding: 5px 20px;
             text-align: center;
             border-radius: 5px;
             text-align: left;
@@ -76,6 +77,52 @@
             color: #777;
             border-radius: 0;
             box-shadow: 0 19px 0 -18px #777;
+        }
+
+        .subheader {
+            color: #bbb;
+            border-radius: 0;
+            font-size: 80%;
+            padding: 0 20px;
+        }
+
+        .hrule {
+            grid-column: 1 / -1;
+            background-color: #e2e2e2;
+            width: calc(100% - 36px);
+            height: 1px;
+            padding: 0;
+            margin: auto;
+        }
+
+        .taste_score {
+            width: 80%;
+            opacity: 0.8;
+            margin-bottom: 4px;
+            padding: 3px;
+            color: #fff;
+            height: 17px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #1e3c72, #2a5298, #76b2fe, #b69efe);
+        }
+
+        .match_yes, .match_no {
+            width: fit-content;
+            opacity: 0.8;
+            margin-bottom: 4px;
+            padding: 3px;
+            color: #fff;
+            height: 17px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        .match_yes {
+            background-color: #43b543;
+        }
+
+        .match_no {
+            background-color: #de5353;
         }
 
     </style>

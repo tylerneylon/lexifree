@@ -259,42 +259,48 @@ def run_auto_evals(test_file):
 
 def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
     ai_defns = gpt_entry['definitions']
-    grid_style = f'grid-template-rows: repeat({len(ai_defns) + 1}, auto)'
+    grid_style = f'grid-template-rows: repeat({2 * len(ai_defns) + 2}, auto)'
     parts = ['<div class="table-holder"><div class="table-left">']
 
     # Columns 1-3 are part of a grid-container.
 
     parts.append(f'<div class="grid-container" style="{grid_style}">')
 
-    def add_item(body, classes=[]):
+    def add_item(body, classes=[], style=''):
         if type(classes) is str:
             classes = [classes]
         class_str = ' '.join(['grid-item'] + classes)
-        parts.append(f'<div class="{class_str}">{body}</div>')
+        parts.append(f'<div class="{class_str}" style="{style}">{body}</div>')
 
     # Column 1: The AI-based definitions.
     add_item(word, 'word')
-    for defn_obj in ai_defns:
+    add_item('AI Definitions', 'subheader')
+    for i, defn_obj in enumerate(ai_defns):
         defn = defn_obj['definition']
-        add_item(defn)
+        add_item('', 'hrule', f'grid-row:{2 * i + 3}')
+        add_item(f'<b>ai{i + 1}.</b> {defn}')
+        # add_item(defn)
 
     # Column 2: Taste scores.
     add_item('Flavor Text', 'header')
+    add_item('Flavor Score', 'subheader')
     for defn_obj in ai_defns:
         poetic_defn = '&lt;none&gt;'
         # if word == 'shirts':
         #     breakpoint()
         if 'poetic_definition' in defn_obj:
             poetic_defn = defn_obj['poetic_definition']
-        add_item(poetic_defn)
+        add_item('<div class="taste_score">score</div>\n' + poetic_defn)
 
     # Column 3: Accuracy.
     add_item('Accuracy', 'header')
+    add_item('Matches wiki defn?', 'subheader')
     for i, defn_obj in enumerate(ai_defns):
         match = ai_matches[i]
         text = 'no' if match is False else 'yes'
+        text = f'<div class="match_{text}">{text}</div>'
         if not (match is False):
-            text += f'\n<p>\nto {wiki_defns[match]}'
+            text += f' matches:<br> <b>wiki{match + 1}.</b> {wiki_defns[match]}'
         add_item(text)
 
     parts.append('</div>')  # End of grid-container for columns 1-3.
