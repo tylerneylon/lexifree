@@ -310,13 +310,21 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
     # This column is a peer with the above grid-container.
 
     parts.append('<div class="table-right">')
-    grid_style = f'grid-template-rows: repeat({len(wiki_defns) + 1}, auto);'
+    grid_style = f'grid-template-rows: repeat({2 * len(wiki_defns) + 2}, auto);'
     grid_style += 'grid-template-columns: 1fr;'
     parts.append(f'<div class="grid-container" style="{grid_style}">')
 
     add_item('Wiktionary Coverage', 'header')
+    add_item('Wiki defn is covered by an AI defn?', 'subheader')
     for i, wiki_defn in enumerate(wiki_defns):
-        add_item(wiki_defn)
+        match = wiki_matches[i]
+        text = 'no' if match is False else 'yes'
+        text = f'<br><div class="match_{text} wiki_match">{text}</div>'
+        if not (match is False):
+            defn = ai_defns[match]['definition']
+            text += f' matches:<br> <b>ai{match + 1}.</b> {defn}'
+        add_item('', 'hrule', f'grid-row:{2 * i + 3}')
+        add_item(f'<b>wiki{i + 1}.</b> ' + wiki_defn + text)
 
     parts.append('</div>')  # End of column 4's grid-container.
     parts.append('</div>')  # End of table-right.
