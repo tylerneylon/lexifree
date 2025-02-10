@@ -36,6 +36,17 @@ from bs4 import BeautifulSoup
 
 
 # ______________________________________________________________________
+# Debug controls
+
+do_print_cache_status = False
+
+def dbg_print(*s):
+    if not do_print_cache_status:
+        return
+    print(*s)
+
+
+# ______________________________________________________________________
 # Globals and Constants
 
 # These are initialized below.
@@ -51,10 +62,10 @@ URL_PREFIX = 'https://googledictionary.freecollocation.com/meaning?word='
 def lookup(word):
 
     if word in known_defs:
-        print('(used cache)')
+        dbg_print(f'google_defs: used cache for "{word}"')
         return known_defs[word]
 
-    print('(looking up from web)')
+    dbg_print(f'google_defs: looking up from web: "{word}"')
     url = URL_PREFIX + word
     response = requests.get(url)
     defs = _extract_definitions(response.text)

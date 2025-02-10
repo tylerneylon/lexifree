@@ -49,6 +49,14 @@ from pathlib import Path
 from openai import OpenAI
 from tqdm import tqdm
 
+import google_defs
+
+
+# ______________________________________________________________________
+# Debug controls
+
+do_print_defn_replacements = False
+
 
 # ______________________________________________________________________
 # Globals and Constants
@@ -74,6 +82,22 @@ def load_wordlist():
     print('done.')
 
     return wordlist
+
+
+# ______________________________________________________________________
+# String functions
+
+JACCARD_SIMILARITY_CUTOFF = 0.23
+
+def get_bigrams(t):
+    words = t.split()
+    return [words[i] + ' ' + words[i + 1] for i in range(len(words) - 1)]
+
+def are_texts_similar(t1, t2):
+    bigrams1 = set(get_bigrams(t1))
+    bigrams2 = set(get_bigrams(t2))
+    similarity = len(bigrams1 & bigrams2) / len(bigrams1 | bigrams2)
+    return similarity > JACCARD_SIMILARITY_CUTOFF
 
 
 # ______________________________________________________________________
@@ -178,6 +202,24 @@ def add_poetic_definitions(json_entry, cost):
     c = get_gpt4o_response(prompt, cost)
     return c.choices[0].message.content
 
+rephrase_prompt_template = '''
+Below is a definition for the word "$WORD$":
+
+$DEFN$
+
+Can you please rephrase this definition, keeping the meaning the same? My only
+goal is to avoid a copyright violation because this phrasing is too similar to
+someone else's definition. Keep the meaning the same, but significantly alter
+the wording. Reply with only the new definition and nothing else.
+'''
+
+def rephrase_definition(word, old_def, cost):
+    prompt = rephrase_prompt_template
+    prompt = prompt.replace('$WORD$', word)
+    prompt = prompt.replace('$DEFN$', old_def)
+    c = get_gpt4o_response(prompt, cost)
+    return c.choices[0].message.content
+
 def log_entry_for_word(word, f):
     ''' Appends a line to the open file at f; this line
         contains a JSON string in one of the following formats:
@@ -215,6 +257,21 @@ def log_entry_for_word(word, f):
     if not (type(entry) is dict):
         log_entry['error'] = 'Initial entry was not a dict object'
         return finish(False)
+
+    # Check for potential copyright problems.
+    g_defs = google_defs.lookup(word)
+    if g_defs is not None:
+        for i, ai_def_obj in enumerate(entry['definitions']):
+            ai_def = ai_def_obj['definition']
+            for g_def in g_defs:
+                if are_texts_similar(g_def, ai_def):
+                    new_def = rephrase_definition(word, ai_def, gpt_cost)
+                    entry['definitions'][i]['definition'] = new_def
+                    if do_print_defn_replacements:
+                        print('Problem found:')
+                        print('AI definition    :', ai_def)
+                        print('Google definition:', g_def)
+                        print('Replacing that with new definition:', new_def)
 
     log_entry['entry'] = entry
 
