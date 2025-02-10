@@ -121,7 +121,7 @@
             margin: auto;
         }
 
-        .taste_score {
+        .taste-score {
             width: 80%;
             opacity: 0.8;
             margin-bottom: 4px;
@@ -130,6 +130,7 @@
             height: 17px;
             border-radius: 5px;
             background: linear-gradient(to right, #1e3c72, #2a5298, #76b2fe, #b69efe);
+            cursor: default;
         }
 
         .match_yes, .match_no {
@@ -156,6 +157,126 @@
         }
 
     </style>
+    <script>
+
+window.onload = function() {
+
+    let SERVER_ERROR = '<server err>';
+
+    let scores = {};
+
+    /**
+     * Maps a value in [0, 1] to a dark color hex code,
+     * transitioning through red -> orange -> yellow -> green using HSV.
+     *
+     * @param {number} value - A number between 0 and 1.
+     * @returns {string} Hex color code.
+     */
+    function getRedToGreenHexColor(value) {
+
+        // Define the HSV values.
+        let hue = value * 100; // 0 is red, and 100 is a shade of green.
+        let sat = 1.0; // Aim for full saturation.
+        let val = 0.7; // Slightly reduce the brightness for a darker shade.
+
+        // Convert from HSV to RGB.
+        let c = sat * val;
+        let x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+        let m = val - c;
+
+        let r_p = 0, g_p = 0, b_p = 0;
+
+        if (0 <= hue && hue < 60) {
+            r_p = c;
+            g_p = x;
+            b_p = 0;
+        } else if (60 <= hue && hue < 120) {
+            r_p = x;
+            g_p = c;
+            b_p = 0;
+        }
+
+        // Shift to the final RGB values.
+        let r = Math.round((r_p + m) * 255);
+        let g = Math.round((g_p + m) * 255);
+        let b = Math.round((b_p + m) * 255);
+
+        // Convert that to hex format.
+        return `#${r.toString(16).padStart(2, '0')}` +
+               `${g.toString(16).padStart(2, '0')}` +
+               `${b.toString(16).padStart(2, '0')}`;
+    }
+
+    // This displays the given score in the given .taste-score div.
+    // This does *not* save the value yet; the user may still be choosing.
+    function showScore(div, score) {
+        if (score === undefined) score = 'unscored';
+        div.textContent = score;
+
+        let colorStr = '';
+        if (score !== 'unscored' && score != SERVER_ERROR) {
+            colorStr = getRedToGreenHexColor((score - 1) / 10);
+        }
+
+        div.style.background = colorStr;
+    }
+
+    // Attach event listeners to every div with class "topic-chooser"
+    document.querySelectorAll('.taste-score').forEach(div => {
+
+        let word    = div.getAttribute('data-word');
+        let aiDefn  = div.getAttribute('data-ai-defn');
+        let key     = word + aiDefn;
+        let score   = scores[key];
+        if (score) showScore(div, score);
+
+        div.addEventListener('mousemove', function(event) {
+
+            // Get the width of the div and the mouse position.
+            const divWidth = div.offsetWidth;
+            const mouseX = event.clientX - div.getBoundingClientRect().left;
+
+            // Calculate which topic to show based on the position
+            let thisScore = Math.floor(mouseX / divWidth * 10);
+            // Clamp the score to [1, 10].
+            thisScore = Math.min(9, Math.max(0, thisScore)) + 1;
+            div.thisScore = thisScore;
+            
+            showScore(div, thisScore);
+        });
+
+        div.addEventListener('mouseout', () => {
+            showScore(div, scores[key]);
+        });
+
+        div.addEventListener('click', function() {
+
+            let score = div.thisScore;
+
+            // Send a POST request with the chosen score.
+            updateObj = {score, word, 'ai_defn': aiDefn};
+            fetch('/score-update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updateObj)
+            })
+            .then(response => response.json())
+            .then(data => {
+                scores[key] = score;
+                showScore(div, scores[key]);
+            })
+            .catch((error) => {
+                scores[key] = SERVER_ERROR;
+                showScore(div, scores[key]);
+            });
+        });
+    });
+};
+
+    </script>
+    </script>
 </head>
 <body>
 
