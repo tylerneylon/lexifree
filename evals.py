@@ -426,18 +426,36 @@ def make_eval_interface_html(results_file):
                                 False])
     coverage = total_covered / total_wiki_defs
 
+    taste = 'unknown'
+
     # Insert a table of aggregate results at the top.
+    if taste == 'unknown':
+        st = '''background: linear-gradient(
+            to right, #1e3c72, #2a5298, #76b2fe, #b69efe);
+        '''
+        taste_str = taste
+    else:
+        color = get_red_to_green_hex_color(taste)
+        st = f'background-color: {color}'
+        taste_str = f'{taste * 100:5.2f}'
+    tst_div = f'''<div class="top-result">Taste
+        <div style="{st}" class="result-num">{taste_str}%</div></div>
+    '''
+
     color = get_red_to_green_hex_color(accuracy)
     st = f'background-color: {color}'
     acc_div = f'''<div class="top-result">Accuracy
         <div style="{st}" class="result-num">{accuracy * 100:5.2f}%</div></div>
     '''
+
     color = get_red_to_green_hex_color(coverage)
     st = f'background-color: {color}'
     cov_div = f'''<div class="top-result">Coverage
         <div style="{st}" class="result-num">{coverage * 100:5.2f}%</div></div>
     '''
-    top_div = f'<div class="centered top-results">{acc_div}{cov_div}</div>'
+    top_div = f'''<div class="centered top-results">
+        {tst_div.strip()}{acc_div.strip()}{cov_div.strip()}
+    </div>'''
     html_parts.insert(0, top_div)
 
     # Check which version we're working with.
