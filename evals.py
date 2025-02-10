@@ -466,8 +466,10 @@ def make_eval_interface_html(results_file):
         if num_taste_scores > 1: sub_str += 's'
     tst_div = f'''
         <div class="top-result">Taste
-            <div style="{st}" class="result-num">{taste_str}</div>
-            <div class="result-sub">{sub_str}</div>
+            <div id="taste_score_avg" style="{st}" class="result-num">
+                {taste_str}
+            </div>
+            <div id="taste_score_sub" class="result-sub">{sub_str}</div>
         </div>
     '''
 

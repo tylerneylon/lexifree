@@ -231,6 +231,28 @@ window.onload = function() {
         div.style.background = colorStr;
     }
 
+    function updateScoreStats() {
+
+        // Recompute the main stats.
+        let numScores = 0;
+        let sumScores = 0;
+        for (const key in scores) {
+            numScores++;
+            sumScores += scores[key];
+        }
+        let avg = sumScores / numScores;
+
+        let avgDiv = document.getElementById('taste_score_avg');
+        avgDiv.textContent = avg.toFixed(2);
+        let color = getRedToGreenHexColor((avg - 1) / 9);
+        avgDiv.style.background = color;
+
+        let subDiv = document.getElementById('taste_score_sub');
+        subtitle = numScores + ' taste score';
+        if (numScores > 1) subtitle += 's';
+        subDiv.textContent = subtitle;
+    }
+
     // Attach event listeners to every div with class "topic-chooser"
     document.querySelectorAll('.taste-score').forEach(div => {
 
@@ -276,6 +298,7 @@ window.onload = function() {
             .then(data => {
                 scores[key] = score;
                 showScore(div, scores[key]);
+                updateScoreStats();
             })
             .catch((error) => {
                 scores[key] = SERVER_ERROR;
