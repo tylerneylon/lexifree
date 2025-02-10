@@ -13,7 +13,7 @@
         ./evals.py run test_N.json > results_N.json
 
         # Run a local server for human evals.
-        ./evals.py server results_N.json
+        ./evals.py serve results_N.json
 
         # Make a static eval html page to share results.
         ./evals.py html results_N.json > evals_N.html
