@@ -73,6 +73,43 @@ def get_gpt4o_response(prompt):
 # ______________________________________________________________________
 # Evaluation functions
 
+
+def get_red_to_green_hex_color(value):
+    ''' This maps a value in [0, 1] to a dark color hex code, transitioning
+    through red -> orange -> yellow -> green using the HSV color space.
+
+    0.0 -> Red (#cc0000-ish)
+    0.5 -> Yellow
+    1.0 -> Green (#00cc00-ish) '''
+
+    # For fully saturated colors that look "dark," we choose:
+    hue = value * 100  # 0 is red, and 100 is a shade of green.
+    sat = 1.0          # This is full saturation.
+    val = 0.7          # Slightly reduce the brightness for a darker shade.
+
+    # Convert HSV -> RGB.
+    c = sat * val
+    x = c * (1 - abs(((hue / 60) % 2) - 1))
+    m = val - c
+    if 0 <= hue < 60:
+        r_p, g_p, b_p = c, x, 0
+    elif 60 <= hue < 120:
+        r_p, g_p, b_p = x, c, 0
+    else:
+        # This shouldn't happen for a hue in [0, 100], but just in case:
+        r_p, g_p, b_p = 0, 0, 0
+
+    # Shift to the final RGB by adding m.
+    r = int((r_p + m) * 255)
+    g = int((g_p + m) * 255)
+    b = int((b_p + m) * 255)
+
+    return f'#{r:02x}{g:02x}{b:02x}'
+
+
+# ______________________________________________________________________
+# Evaluation functions
+
 check_defn_prompt = '''
     Here are the official definitions for a particular word:
 
@@ -363,7 +400,7 @@ def make_eval_interface_html(results_file):
             matches = wiki_matches.setdefault(result['word'], {})
             matches[result['wiki_defn']] = result['match']
     make_list = lambda x: [y[1] for y in sorted(x.items())]
-    ai_matches = { w: make_list(x) for w, x in ai_matches.items() }
+    ai_matches   = { w: make_list(x) for w, x in ai_matches.items() }
     wiki_matches = { w: make_list(x) for w, x in wiki_matches.items() }
     html_parts = [
             make_word_eval_table(
@@ -373,8 +410,34 @@ def make_eval_interface_html(results_file):
             for word in sorted(words)
     ]
 
+    # Calculate the aggregate results.
+    total_ai_defs  = 0
+    total_accurate = 0
+    for word in words:
+        total_ai_defs  += len(gpt_data[word]['definitions'])
+        total_accurate += len([x for x in ai_matches[word] if x is not False])
+    accuracy = total_accurate / total_ai_defs
+
+    total_wiki_defs = 0
+    total_covered   = 0
+    for word in words:
+        total_wiki_defs += len(wiki_data[word])
+        total_covered   += len([x for x in wiki_matches[word] if x is not
+                                False])
+    coverage = total_covered / total_wiki_defs
+
     # Insert a table of aggregate results at the top.
-    top_div = f'<div class="centered top-results">something</div>'
+    color = get_red_to_green_hex_color(accuracy)
+    st = f'background-color: {color}'
+    acc_div = f'''<div class="top-result">Accuracy
+        <div style="{st}" class="result-num">{accuracy * 100:5.2f}%</div></div>
+    '''
+    color = get_red_to_green_hex_color(coverage)
+    st = f'background-color: {color}'
+    cov_div = f'''<div class="top-result">Coverage
+        <div style="{st}" class="result-num">{coverage * 100:5.2f}%</div></div>
+    '''
+    top_div = f'<div class="centered top-results">{acc_div}{cov_div}</div>'
     html_parts.insert(0, top_div)
 
     # Check which version we're working with.
