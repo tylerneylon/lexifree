@@ -338,7 +338,7 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
                     'data-ai-defn': i
             }
             attr_str = ' '.join(f'{key}="{val}"' for key, val in attrs.items())
-            add_item(f'<div {attr_str}>unscored</div>\n' + poetic_defn)
+            add_item(f'<div {attr_str}>click to score</div>\n' + poetic_defn)
         else:
             add_item(poetic_defn)
 

@@ -220,11 +220,11 @@ window.onload = function() {
     // This displays the given score in the given .taste-score div.
     // This does *not* save the value yet; the user may still be choosing.
     function showScore(div, score) {
-        if (score === undefined) score = 'unscored';
+        if (score === undefined) score = 'click to score';
         div.textContent = score;
 
         let colorStr = '';
-        if (score !== 'unscored' && score != SERVER_ERROR) {
+        if (score !== 'click to score' && score != SERVER_ERROR) {
             colorStr = getRedToGreenHexColor((score - 1) / 9);
         }
 
