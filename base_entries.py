@@ -71,6 +71,16 @@ COMPLETION_TOKEN_COST = (10 / 1e6)  # That's $ 10 / 1m tokens.
 
 
 # ______________________________________________________________________
+# Universal Initialization
+
+# Things go here if they ought to be initialized whether or not this module is
+# imported as a library, or run as main.
+
+# Set up the OpenAI client connection.
+client = OpenAI()
+
+
+# ______________________________________________________________________
 # Data Functions
 
 def load_wordlist():
@@ -223,15 +233,18 @@ def rephrase_definition(word, old_def, cost):
     c = get_gpt4o_response(prompt, cost)
     return c.choices[0].message.content
 
-def log_entry_for_word(word, f):
-    ''' Appends a line to the open file at f; this line
-        contains a JSON string in one of the following formats:
+def build_entry(word, f=None):
+    ''' This creates a new entry object for `word`, and returns that entry.
+        The entry will be in one of these formats:
+
         * {'word', 'error': string} OR
         * {'word', 'base_word'} OR
         * {'word', 'entry'}
 
-        Returns the word, which can be convenient when calling this function as
-        part of a threading pool.
+        If a file pointer is provided in f, then the entry will be written to f
+        as well; this is intended to be used when f is in append mode on a file
+        with one json string per line. (This function writes one line, including
+        a terminating newline, to that file.)
     '''
 
     log_entry = {'word': word, 'version': VERSION}
@@ -241,8 +254,9 @@ def log_entry_for_word(word, f):
     # like (as part of a return value).
     def finish(is_ok):
         log_entry['cost'] = gpt_cost['cost']
-        f.write(json.dumps(log_entry) + '\n')
-        return word
+        if f is not None:
+            f.write(json.dumps(log_entry) + '\n')
+        return log_entry
 
     # Check to see if this is a valid English word.
     if not is_english_word(word, gpt_cost):
@@ -335,14 +349,11 @@ if __name__ == '__main__':
         wordlist = load_wordlist()  # Load our word list.
         words = wordlist[start:end]
 
-    # Set up the OpenAI client connection.
-    client = OpenAI()
-
     # If there's only one word, don't be fancy about it.
     pbar = None
     if len(words) == 1:
         with open('entries.json', 'a') as f:
-            log_entry_for_word(words[0], f)
+            build_entry(words[0], f)
         sys.exit(0)
 
     # Get dictionary data for the given words.
@@ -350,11 +361,11 @@ if __name__ == '__main__':
     with open('entries.json', 'a') as f:
         with ThreadPoolExecutor(max_workers=20) as executor:
             futures = [
-                    executor.submit(log_entry_for_word, word, f)
+                    executor.submit(build_entry, word, f)
                     for word in words
             ]
             for future in as_completed(futures):
-                word = future.result()
+                entry = future.result()
                 pbar.update(1)
-                pbar.set_description(word)
+                pbar.set_description(entry['word'])
     pbar.set_description('Done')
