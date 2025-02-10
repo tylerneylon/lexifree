@@ -330,17 +330,17 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
     add_item('Flavor Score', 'subheader')
     for i, defn_obj in enumerate(ai_defns):
         poetic_defn = '&lt;none&gt;'
-        # if word == 'shirts':
-        #     breakpoint()
         if 'poetic_definition' in defn_obj:
             poetic_defn = defn_obj['poetic_definition']
-        attrs = {
-                'class': 'taste-score',
-                'data-word': word,
-                'data-ai-defn': i
-        }
-        attr_str = ' '.join(f'{key}="{val}"' for key, val in attrs.items())
-        add_item(f'<div {attr_str}>unscored</div>\n' + poetic_defn)
+            attrs = {
+                    'class': 'taste-score',
+                    'data-word': word,
+                    'data-ai-defn': i
+            }
+            attr_str = ' '.join(f'{key}="{val}"' for key, val in attrs.items())
+            add_item(f'<div {attr_str}>unscored</div>\n' + poetic_defn)
+        else:
+            add_item(poetic_defn)
 
     # Column 3: Accuracy.
     add_item('Accuracy', 'header')
