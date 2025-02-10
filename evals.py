@@ -397,10 +397,14 @@ def make_eval_interface_html(results_file):
 
     # Load in the pre-existing taste scores, if any.
     taste_scores = {}
+    sum_taste_scores = 0
+    num_taste_scores = 0
     for result in results:
         if 'taste_score' in result:
             key = result['word'] + result['ai_defn']
             taste_scores[key] = result['taste_score']
+            num_taste_scores += 1
+            sum_taste_scores += taste_scores[key]
     html = html.replace('$TASTE_SCORES$', str(taste_scores))
 
     # Build a table per word.
@@ -442,7 +446,10 @@ def make_eval_interface_html(results_file):
                                 False])
     coverage = total_covered / total_wiki_defs
 
-    taste = 'unknown'
+    if num_taste_scores == 0:
+        taste = 'unknown'
+    else:
+        taste = sum_taste_scores / num_taste_scores
 
     # Insert a table of aggregate results at the top.
     if taste == 'unknown':
@@ -450,25 +457,41 @@ def make_eval_interface_html(results_file):
             to right, #1e3c72, #2a5298, #76b2fe, #b69efe);
         '''
         taste_str = taste
+        sub_str = 'no data yet'
     else:
-        color = get_red_to_green_hex_color(taste)
+        color = get_red_to_green_hex_color((taste - 1)/ 9)
         st = f'background-color: {color}'
-        taste_str = f'{taste * 100:5.2f}'
-    tst_div = f'''<div class="top-result">Taste
-        <div style="{st}" class="result-num">{taste_str}%</div></div>
+        taste_str = f'{taste:5.2f}'
+        sub_str = f'{num_taste_scores} taste score'
+        if num_taste_scores > 1: sub_str += 's'
+    tst_div = f'''
+        <div class="top-result">Taste
+            <div style="{st}" class="result-num">{taste_str}</div>
+            <div class="result-sub">{sub_str}</div>
+        </div>
     '''
 
     color = get_red_to_green_hex_color(accuracy)
     st = f'background-color: {color}'
-    acc_div = f'''<div class="top-result">Accuracy
-        <div style="{st}" class="result-num">{accuracy * 100:5.2f}%</div></div>
+    acc_div = f'''
+        <div class="top-result">
+            Accuracy
+            <div style="{st}" class="result-num">{accuracy * 100:5.2f}%</div>
+            <div class="result-sub">{total_ai_defs} AI definitions</div>
+        </div>
     '''
 
     color = get_red_to_green_hex_color(coverage)
     st = f'background-color: {color}'
-    cov_div = f'''<div class="top-result">Coverage
-        <div style="{st}" class="result-num">{coverage * 100:5.2f}%</div></div>
+    n = total_wiki_defs
+    cov_div = f'''
+        <div class="top-result">
+            Coverage
+            <div style="{st}" class="result-num">{coverage * 100:5.2f}%</div>
+            <div class="result-sub">{n} wiki definitions</div>
+        </div>
     '''
+
     top_div = f'''<div class="centered top-results">
         {tst_div.strip()}{acc_div.strip()}{cov_div.strip()}
     </div>'''

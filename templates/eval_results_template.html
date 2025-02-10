@@ -57,6 +57,13 @@
             border-radius: 5px;
         }
 
+        .result-sub {
+            padding-top: 10px;
+            font-size: 70%;
+            font-weight: normal;
+            color: #AAA;
+        }
+
         .table-left, .table-right {
             flex: 1;
             padding: 5px;
@@ -218,7 +225,7 @@ window.onload = function() {
 
         let colorStr = '';
         if (score !== 'unscored' && score != SERVER_ERROR) {
-            colorStr = getRedToGreenHexColor((score - 1) / 10);
+            colorStr = getRedToGreenHexColor((score - 1) / 9);
         }
 
         div.style.background = colorStr;
