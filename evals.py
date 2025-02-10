@@ -43,6 +43,7 @@
 
 import json
 import sys
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from openai import OpenAI
@@ -146,6 +147,7 @@ def load_data(test_file):
                 gpt_errors[word] = data['error']
             else:
                 gpt_data[word] = data['entry']
+                gpt_data[word]['version'] = data['version']
 
     # Load in the test entries.
     wiki_data = {}
@@ -348,7 +350,7 @@ def make_eval_interface_html(results_file):
 
     # Load in the html template.
     with open('templates/eval_results_template.html') as f:
-        html_template = f.read()
+        html = f.read()
 
     # Build a table per word.
     words = {result['word'] for result in results}
@@ -363,7 +365,7 @@ def make_eval_interface_html(results_file):
     make_list = lambda x: [y[1] for y in sorted(x.items())]
     ai_matches = { w: make_list(x) for w, x in ai_matches.items() }
     wiki_matches = { w: make_list(x) for w, x in wiki_matches.items() }
-    table_strs = [
+    html_parts = [
             make_word_eval_table(
                 word, gpt_data[word], wiki_data[word],
                 ai_matches[word], wiki_matches[word]
@@ -371,8 +373,24 @@ def make_eval_interface_html(results_file):
             for word in sorted(words)
     ]
 
+    # Insert a table of aggregate results at the top.
+    top_div = f'<div class="centered top-results">something</div>'
+    html_parts.insert(0, top_div)
+
+    # Check which version we're working with.
+    # We'll verify consistency and print a warning on multiple version strings.
+    all_versions = Counter([
+        gpt_data[w]['version'] for w in words
+    ])
+    version = list(all_versions.keys())[0]
+    if len(all_versions.keys()) > 1:
+        print('Warning: I see multiple version strings for this data:')
+        print(all_versions)
+        version = f'(mixed, ~{all_versions.most_common(1)})'
+    html = html.replace('$VERSION$', version)
+
     # Compile and return the resulting html string.
-    html = html_template.replace('$BODY$', '\n\n'.join(table_strs))
+    html = html.replace('$BODY$', '\n\n'.join(html_parts))
     return html
 
 def make_page_handler(html):
