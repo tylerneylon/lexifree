@@ -12,3 +12,4 @@ test*.json
 _scratch/
 _tmp*
 results*.json
+google_defs.json
