@@ -395,10 +395,20 @@ def make_eval_interface_html(results_file):
     with open('templates/eval_results_template.html') as f:
         html = f.read()
 
+    # Load in the pre-existing taste scores, if any.
+    taste_scores = {}
+    for result in results:
+        if 'taste_score' in result:
+            key = result['word'] + result['ai_defn']
+            taste_scores[key] = result['taste_score']
+    html = html.replace('$TASTE_SCORES$', str(taste_scores))
+
     # Build a table per word.
     words = {result['word'] for result in results}
     ai_matches, wiki_matches = {}, {}
     for result in results:
+        if 'taste_score' in result:
+            continue
         if 'ai_defn' in result:
             matches = ai_matches.setdefault(result['word'], {})
             matches[result['ai_defn']] = result['match']
@@ -488,16 +498,38 @@ def make_page_handler(html):
 
     return get_page
 
+def make_update_handler(f):
+
+    def handle_score_update(update):
+        in_update_obj  = json.loads(update)
+        out_update_obj = {
+                'word': in_update_obj['word'],
+                'ai_defn': in_update_obj['ai_defn'],
+                'taste_score': in_update_obj['score']
+        }
+        f.write(json.dumps(out_update_obj) + '\n')
+        return {'success': True}
+
+    return handle_score_update
+
 def serve_eval_interface(results_file):
     print('Go to http://localhost/ to use the interface.')
     print('Press ctrl-C when you\'re done to exit.')
 
+    f = open(results_file, 'a')
+
+    # Set up the route handlers.
     html = make_eval_interface_html(results_file)
-    handler = make_page_handler(html)
-    GET_routes  = [['/', handler]]
-    POST_routes = []
+    main_handler = make_page_handler(html)
+    update_handler = make_update_handler(f)
+
+    # Set up and run the server.
+    GET_routes  = [['/', main_handler]]
+    POST_routes = [['/score-update', update_handler]]
     shotglass.register_routes(GET_routes, POST_routes)
     shotglass.run_server()
+
+    f.close()
 
 
 # ______________________________________________________________________
