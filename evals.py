@@ -382,13 +382,16 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
     parts.append('</div>')  # End of table-holder.
     return '\n'.join(parts)
 
-def make_eval_interface_html(results_file):
-
-    # Load in the word and definition data.
+def load_results(results_file):
     with open(results_file) as f:
         first_line = next(f)
         test_file = json.loads(first_line)['test_file']
         results = [json.loads(line) for line in f]
+    return test_file, results
+
+def make_eval_interface_html(test_file, results):
+
+    # Load in the word and definition data.
     gpt_data, gpt_errors, wiki_data = load_data(test_file)
 
     # Load in the html template.
@@ -397,14 +400,17 @@ def make_eval_interface_html(results_file):
 
     # Load in the pre-existing taste scores, if any.
     taste_scores = {}
-    sum_taste_scores = 0
-    num_taste_scores = 0
     for result in results:
         if 'taste_score' in result:
             key = result['word'] + result['ai_defn']
             taste_scores[key] = result['taste_score']
-            num_taste_scores += 1
-            sum_taste_scores += taste_scores[key]
+    # Aggregate the scores _after_ we've made `taste_scores`. Otherwise, we may
+    # accidentally overcount journal entries that overlap each other.
+    sum_taste_scores = 0
+    num_taste_scores = 0
+    for key, score in taste_scores.items():
+        num_taste_scores += 1
+        sum_taste_scores += score
     html = html.replace('$TASTE_SCORES$', str(taste_scores))
 
     # Build a table per word.
@@ -515,15 +521,17 @@ def make_eval_interface_html(results_file):
     html = html.replace('$BODY$', '\n\n'.join(html_parts))
     return html
 
-def make_page_handler(html):
+def make_main_page_handler(test_file, results):
 
     def get_page():
+        # Rebuild this with each call since the `results` object may be updated
+        # between calls.
+        html = make_eval_interface_html(test_file, results)
         return html.encode('utf-8')
-        # return b'<html><body><h1>hello</h1></body></html>'
 
     return get_page
 
-def make_update_handler(f):
+def make_update_handler(f, results):
 
     def handle_score_update(update):
         in_update_obj  = json.loads(update)
@@ -533,6 +541,7 @@ def make_update_handler(f):
                 'taste_score': in_update_obj['score']
         }
         f.write(json.dumps(out_update_obj) + '\n')
+        results.append(out_update_obj)
         return {'success': True}
 
     return handle_score_update
@@ -541,12 +550,12 @@ def serve_eval_interface(results_file):
     print('Go to http://localhost/ to use the interface.')
     print('Press ctrl-C when you\'re done to exit.')
 
-    f = open(results_file, 'a')
 
     # Set up the route handlers.
-    html = make_eval_interface_html(results_file)
-    main_handler = make_page_handler(html)
-    update_handler = make_update_handler(f)
+    test_file, results = load_results(results_file)
+    main_handler = make_main_page_handler(test_file, results)
+    f = open(results_file, 'a')
+    update_handler = make_update_handler(f, results)
 
     # Set up and run the server.
     GET_routes  = [['/', main_handler]]
