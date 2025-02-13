@@ -262,6 +262,8 @@ window.onload = function() {
         let score   = scores[key];
         if (score) showScore(div, score);
 
+        $BEGIN_LISTENERS$
+
         div.addEventListener('mousemove', function(event) {
 
             // Get the width of the div and the mouse position.
@@ -305,10 +307,12 @@ window.onload = function() {
                 showScore(div, scores[key]);
             });
         });
+
+        $END_LISTENERS$
+
     });
 };
 
-    </script>
     </script>
 </head>
 <body>

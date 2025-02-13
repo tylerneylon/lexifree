@@ -71,8 +71,7 @@ def get_gpt4o_response(prompt):
 
 
 # ______________________________________________________________________
-# Evaluation functions
-
+# HTML utility functions
 
 def get_red_to_green_hex_color(value):
     ''' This maps a value in [0, 1] to a dark color hex code, transitioning
@@ -105,6 +104,20 @@ def get_red_to_green_hex_color(value):
     b = int((b_p + m) * 255)
 
     return f'#{r:02x}{g:02x}{b:02x}'
+
+def remove_between(s, start_str, end_str):
+    ''' This expects there to be a single instance of start_str, and a single
+        instance of end_str, in s. This removes start_str, end_str, and
+        everything between them from s, returning the result.
+    '''
+    before = s.split(start_str, 1)[0]
+    after  = s.split(end_str,   1)[1]
+    return before + after
+
+def print_static_eval_page(results_file):
+    test_file, results = load_results(results_file)
+    html = make_eval_interface_html(test_file, results, static_page=True)
+    print(html)
 
 
 # ______________________________________________________________________
@@ -301,7 +314,8 @@ def run_auto_evals(test_file):
 # ______________________________________________________________________
 # Server functions
 
-def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
+def make_word_eval_table(
+        word, gpt_entry, wiki_defns, ai_matches, wiki_matches, static_page):
     ai_defns = gpt_entry['definitions']
     grid_style = f'grid-template-rows: repeat({2 * len(ai_defns) + 2}, auto)'
     parts = ['<div class="table-holder"><div class="table-left">']
@@ -328,6 +342,7 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
     # Column 2: Taste scores.
     add_item('Flavor Text', 'header')
     add_item('Flavor Score', 'subheader')
+    unscored_str = 'unscored' if static_page else 'click to score'
     for i, defn_obj in enumerate(ai_defns):
         poetic_defn = '&lt;none&gt;'
         if 'poetic_definition' in defn_obj:
@@ -338,7 +353,7 @@ def make_word_eval_table(word, gpt_entry, wiki_defns, ai_matches, wiki_matches):
                     'data-ai-defn': i
             }
             attr_str = ' '.join(f'{key}="{val}"' for key, val in attrs.items())
-            add_item(f'<div {attr_str}>click to score</div>\n' + poetic_defn)
+            add_item(f'<div {attr_str}>{unscored_str}</div>\n' + poetic_defn)
         else:
             add_item(poetic_defn)
 
@@ -389,7 +404,7 @@ def load_results(results_file):
         results = [json.loads(line) for line in f]
     return test_file, results
 
-def make_eval_interface_html(test_file, results):
+def make_eval_interface_html(test_file, results, static_page=False):
 
     # Load in the word and definition data.
     gpt_data, gpt_errors, wiki_data = load_data(test_file)
@@ -397,6 +412,15 @@ def make_eval_interface_html(test_file, results):
     # Load in the html template.
     with open('templates/eval_results_template.html') as f:
         html = f.read()
+
+    # Keep or remove the event listeners according to static_page.
+    if static_page:
+        html = remove_between(
+                html, '$BEGIN_LISTENERS$', '$END_LISTENERS$'
+        )
+    else:
+        html = html.replace('$BEGIN_LISTENERS$', '')
+        html = html.replace('$END_LISTENERS$', '')
 
     # Load in the pre-existing taste scores, if any.
     taste_scores = {}
@@ -431,7 +455,8 @@ def make_eval_interface_html(test_file, results):
     html_parts = [
             make_word_eval_table(
                 word, gpt_data[word], wiki_data[word],
-                ai_matches[word], wiki_matches[word]
+                ai_matches[word], wiki_matches[word],
+                static_page
             )
             for word in sorted(words)
     ]
@@ -551,7 +576,6 @@ def serve_eval_interface(results_file):
     print('Go to http://localhost/ to use the interface.')
     print('Press ctrl-C when you\'re done to exit.')
 
-
     # Set up the route handlers.
     test_file, results = load_results(results_file)
     main_handler = make_main_page_handler(test_file, results)
@@ -576,8 +600,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 3:
         print(__doc__)
         sys.exit(0)
-    # TEMP TODO This script is only partially implemented right now.
-    assert sys.argv[1] in ['run', 'serve']
+    assert sys.argv[1] in ['run', 'serve', 'html']
 
     client = OpenAI()
 
@@ -585,4 +608,6 @@ if __name__ == '__main__':
         run_auto_evals(sys.argv[2])
     elif sys.argv[1] == 'serve':
         serve_eval_interface(sys.argv[2])
+    elif sys.argv[1] == 'html':
+        print_static_eval_page(sys.argv[2])
 
