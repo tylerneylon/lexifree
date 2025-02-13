@@ -116,20 +116,26 @@ def are_texts_similar(t1, t2):
 # ______________________________________________________________________
 # OpenAI API Utilities
 
-def get_gpt4o_response(prompt, cost=None):
+def get_gpt4o_response(prompt, cost=None, require_json=False):
     ''' Fetches a response from GPT-4o using the OpenAI API.
         Returns the response (a completion objection) from gpt-4o for the given
         `prompt`. If there's an error, an error message (a string) is returned
         instead.
+        The optional `cost` parameter is expected to be a dict with a 'cost'
+        key; this adds the cost (in dollars) to that value when `cost` is given.
+        When require_json is True, the response is guaranteed to a JSON string.
     '''
+
+    response_format = {'type': 'json_object'} if require_json else None
+
     try:
         completion = client.chat.completions.create(
             model='gpt-4o',
-
             messages=[
                 {'role': 'system', 'content': 'You are a helpful assistant.'},
                 {'role': 'user', 'content': prompt}
-            ]
+            ],
+            response_format=response_format
         )
         if cost:
             cost['cost'] += (
@@ -165,6 +171,27 @@ def is_english_word(word, cost):
     )
     reply = c.choices[0].message.content
     return 'yes' in reply.lower()
+
+derived_check_template = '''
+Is "$WORD$" a word that is a direct conjugation of another word?
+For example, it may be a plural, a gerund, or a past tense version
+of a root word.  Please reply with a JSON object like {"is_derived",
+"root_word"}; the "root_word" key is optional; omit it if the word "$WORD$" is
+not directly derived (such as a plural or past tense, etc). For borderline cases
+like "educational" please say the word is not derived.'
+'''
+
+def check_if_derived(word, cost=None):
+    ''' This returns (is_derived, root_word) for `word`.
+        Examples: running -> True, 'run'
+                  phone   -> False, None
+    '''
+    prompt = derived_check_template.replace('$WORD$', word)
+    response = get_gpt4o_response(prompt, cost, require_json=True)
+    data = json.loads(response.choices[0].message.content)
+    is_derived = data['is_derived']
+    root_word = data['root_word'] if is_derived else None
+    return is_derived, root_word
 
 dictionary_entry_prompt_template = '''
     Please provide a dictionary entry for the word "$WORD$" in JSON format.
@@ -250,18 +277,27 @@ def build_entry(word, f=None):
     log_entry = {'word': word, 'version': VERSION}
     gpt_cost  = {'cost': 0}
 
-    # Currently the code ignores is_ok, but you can add that back in if you'd
-    # like (as part of a return value).
-    def finish(is_ok):
+    def save_progress():
         log_entry['cost'] = gpt_cost['cost']
         if f is not None:
             f.write(json.dumps(log_entry) + '\n')
+
+    # Currently the code ignores is_ok, but you can add that back in if you'd
+    # like (as part of a return value).
+    def finish(is_ok):
+        save_progress()
         return log_entry
 
     # Check to see if this is a valid English word.
     if not is_english_word(word, gpt_cost):
         log_entry['error'] = 'not an English word'
         return finish(False)
+
+    is_derived, base_word = check_if_derived(word, gpt_cost)
+    if is_derived:
+        log_entry['base_word'] = base_word
+        save_progress()
+        return build_entry(base_word, f)
 
     # Get the initial entry.
     reply = get_dictionary_entry(word, gpt_cost)

@@ -117,7 +117,7 @@ if __name__ == '__main__':
         if do_use_wiktionary:
             word_obj = wiki.get_wiktionary_definitions(word)
             if word_obj is None:
-                continue
+                word_obj = {'word': word, 'error': 'wiki lookup failed'}
             print(json.dumps(word_obj))
         else:
             print(word)

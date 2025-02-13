@@ -50,6 +50,7 @@ from openai import OpenAI
 from tqdm import tqdm
 
 import shotglass
+import wiki
 
 
 # ______________________________________________________________________
@@ -59,7 +60,6 @@ def get_gpt4o_response(prompt):
     try:
         completion = client.chat.completions.create(
             model="gpt-4o",
-
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
@@ -67,6 +67,7 @@ def get_gpt4o_response(prompt):
         )
         return completion
     except Exception as e:
+        print('Error via API call:', e, file=sys.stderr)
         return f"An error occurred: {e}"
 
 
@@ -171,7 +172,7 @@ def is_defn_good(defn, given_defns):
 
     return ('Error: bad GPT response', c)
 
-def load_data(test_file):
+def load_data(test_file, add_to_wiki_coverage=False):
     ''' This loads in test words from test_file (assumed to be a json file, with
         one json string per line), as well as the corresponding ai-made entries
         from entries.json.
@@ -189,12 +190,15 @@ def load_data(test_file):
     # Load in the AI-based entries.
     gpt_data = {}
     gpt_errors = {}
+    base_word_of = {}  # base_word_of[derived] = base
     with open('entries.json') as f:
         for line in f:
             data = json.loads(line)
             word = data['word']
             if 'error' in data:
                 gpt_errors[word] = data['error']
+            elif 'base_word' in data:
+                base_word_of[word] = data['base_word']
             else:
                 gpt_data[word] = data['entry']
                 gpt_data[word]['version'] = data['version']
@@ -202,13 +206,33 @@ def load_data(test_file):
     # Load in the test entries.
     wiki_data = {}
     wiki_words = []  # Track the order of the words.
+    words_not_in_wiki = set()
     with open(test_file) as f:
         for line in f:
             data = json.loads(line)
             word  = data['word']
+            if 'error' in data:
+                words_not_in_wiki.add(word)
+                continue
             defns = data['wiktionary_definitions']
             wiki_data[word] = defns
             wiki_words.append(word)
+
+    # We may have some base words that are defined by AI but not yet by wiki.
+    # Attempt to add those wiki definitions now, if requested.
+    if add_to_wiki_coverage:
+        for word in base_word_of:
+            if word in words_not_in_wiki:
+                base_word = base_word_of[word]
+                data = wiki.get_wiktionary_definitions(base_word)
+                if data is None:  # Skip this word if it has no wiki definition.
+                    continue
+                with open(test_file, 'a') as f:
+                    f.write(json.dumps(data) + '\n')
+                word  = data['word']
+                defns = data['wiktionary_definitions']
+                wiki_data[word] = defns
+                wiki_words.append(word)
 
     # Reduce the word set down to the first 100 error-free words.
     keep = set()
@@ -218,6 +242,16 @@ def load_data(test_file):
         if len(keep) == 100:
             break
     wiki_data = {w: value for w, value in wiki_data.items() if w in keep}
+
+    # If the user generated a test set without making entries for it, then
+    # wiki_data will be empty here, and that's an error for us.
+    if len(wiki_data) == 0:
+        def err_print(*s):
+            print(*s, file=sys.stderr)
+        err_print('\nError: No wiktionary data overlaps with entry data.')
+        err_print('Did you forget to make entries for this test?')
+        err_print('Exiting since I can\'t run evals without wiki data.\n')
+        sys.exit(1)
 
     return gpt_data, gpt_errors, wiki_data
 
@@ -287,7 +321,8 @@ def run_auto_evals(test_file):
         definition coverage (similar to precision and recall).
     '''
 
-    gpt_data, gpt_errors, wiki_data = load_data(test_file)
+    gpt_data, gpt_errors, wiki_data = load_data(
+            test_file, add_to_wiki_coverage=True)
     print(json.dumps({'test_file': test_file}))
 
     # Check the accuracy of all the AI-based definitions that
