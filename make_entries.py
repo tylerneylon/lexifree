@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # coding: utf-8
-''' base_entries.py
+''' make_entries.py
 
     This script contains the main code to learn about core dictionary entry
     information for a given word. It is designed to be used as either a library,
@@ -8,24 +8,24 @@
 
     Command-line usage:
 
-        ./base_entries.py START END
+        ./make_entries.py START END
 
     The above will look up base dictionary entries for the words with indexes
     [START,END), both expected to be non-negative integers. These are indexes
     into the unigram dataset.
 
-        ./base_entries.py <word_list.txt>
+        ./make_entries.py <word_list.txt>
 
     The above will look up dictionary entries for the words listed, one per
     line, in the given file. (This relies on the extension .txt.)
 
-        ./base_entries.py <word_list.json>
+        ./make_entries.py <word_list.json>
     
     The above will look up dictionary entries for the word objects (as JSON
     strings) listed in the given file. (This relies on the extension .json.)
     This expects one JSON object per line in the json file.
 
-        ./base_entries.py -w WORD
+        ./make_entries.py -w WORD
 
     The above performs a lookup for WORD.
 
