@@ -541,6 +541,7 @@ def make_update_handler(f, results):
                 'taste_score': in_update_obj['score']
         }
         f.write(json.dumps(out_update_obj) + '\n')
+        f.flush()
         results.append(out_update_obj)
         return {'success': True}
 
