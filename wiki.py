@@ -38,12 +38,24 @@ WIKTIONARY_URL_TEMPLATE = (
 
 
 # ______________________________________________________________________
+# Internal functions
+
+def _starts_lower(s):
+    return s[0].islower()
+
+def _capitalize(s):
+    return ''.join([s[0].upper()] + list(s[1:]))
+
+
+# ______________________________________________________________________
 # Public functions
 
 def get_wiktionary_definitions(word):
     ''' This looks up and parses definitions for `word` in wiktionary.
         On success, it returns an object of this shape:
             {'word': str, 'wiktionary_definitions': [str]}
+        If the original input `word` fails, this also attempts to look up the
+        same word with the first letter capitalized.
         If there's an error, it returns None.
     '''
     # print(f'Looking up the definitions for "{word}" .. ', end='', flush=True)
@@ -54,11 +66,15 @@ def get_wiktionary_definitions(word):
             data = response.read().decode('utf-8')
     except:
         print(f'Error looking up the word "{word}"', file=sys.stderr)
+        if _starts_lower(word):
+            return get_wiktionary_definitions(_capitalize(word))
         return None
     data_obj = json.loads(data)
     defns = []
     if 'en' not in data_obj:
         print(f'Error: no "en" block for the word "{word}"', file=sys.stderr)
+        if _starts_lower(word):
+            return get_wiktionary_definitions(_capitalize(word))
         return None
     for defn_block in data_obj['en']:
         # Uncomment this to help with debugging.
