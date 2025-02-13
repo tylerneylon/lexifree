@@ -38,10 +38,10 @@ import json
 import math
 import random
 import sys
-from urllib import request
 
-from bs4 import BeautifulSoup
 from tqdm import tqdm
+
+import wiki
 
 
 # ______________________________________________________________________
@@ -57,41 +57,6 @@ WIKTIONARY_URL_TEMPLATE = (
 
 # ______________________________________________________________________
 # Functions
-
-def get_wiktionary_definitions(word):
-    # print(f'Looking up the definitions for "{word}" .. ', end='', flush=True)
-    url = WIKTIONARY_URL_TEMPLATE.replace('$WORD$', word)
-    # print('url', url)
-    try:
-        with request.urlopen(url) as response:
-            data = response.read().decode('utf-8')
-    except:
-        print(f'Error looking up the word "{word}"', file=sys.stderr)
-        return None
-    data_obj = json.loads(data)
-    defns = []
-    if 'en' not in data_obj:
-        print(f'Error: no "en" block for the word "{word}"', file=sys.stderr)
-        return None
-    for defn_block in data_obj['en']:
-        # Uncomment this to help with debugging.
-        if False:
-            print('_' * 70)
-            print('defn_block:')
-            print(defn_block)
-            print()
-        part_of_speech = defn_block['partOfSpeech']
-        for defn in defn_block['definitions']:
-            defn_text = defn['definition']
-            if len(defn_text.strip()) == 0:
-                continue
-            # Skip over entries that act as references.
-            if 'mw-cite-backlink' in defn_text:
-                continue
-            soup = BeautifulSoup(defn_text, 'html.parser')
-            defns.append(part_of_speech + ' ' + soup.get_text())
-    # print('done.')
-    return {'word': word, 'wiktionary_definitions': defns}
 
 def parse_seed_from_args(args):
     ''' This returns `seed` and modifies `args` to exclude the -s SEED values,
@@ -150,7 +115,7 @@ if __name__ == '__main__':
     num_printed = 0
     for word in rand_words:
         if do_use_wiktionary:
-            word_obj = get_wiktionary_definitions(word)
+            word_obj = wiki.get_wiktionary_definitions(word)
             if word_obj is None:
                 continue
             print(json.dumps(word_obj))
