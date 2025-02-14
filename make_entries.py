@@ -395,7 +395,7 @@ if __name__ == '__main__':
     # Get dictionary data for the given words.
     pbar = tqdm(total=len(words), file=sys.stderr)
     with open('entries.json', 'a') as f:
-        with ThreadPoolExecutor(max_workers=20) as executor:
+        with ThreadPoolExecutor(max_workers=200) as executor:
             futures = [
                     executor.submit(build_entry, word, f)
                     for word in words

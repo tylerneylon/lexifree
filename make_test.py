@@ -38,6 +38,7 @@ import json
 import math
 import random
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
 
@@ -106,24 +107,37 @@ if __name__ == '__main__':
     rand_words = random.choices(
             candidate_words,
             weights=candidate_weights,
-            k=math.ceil(num_words * 1.5)
+            k=math.ceil(num_words)
     )
 
-    if do_use_wiktionary:
-        progress_bar = tqdm(total=num_words, file=sys.stderr)
-
-    num_printed = 0
-    for word in rand_words:
-        if do_use_wiktionary:
-            word_obj = wiki.get_wiktionary_definitions(word)
-            if word_obj is None:
-                word_obj = {'word': word, 'error': 'wiki lookup failed'}
-            print(json.dumps(word_obj))
-        else:
+    if not do_use_wiktionary:
+        for word in rand_words:
             print(word)
-        num_printed += 1
-        if do_use_wiktionary:
+        sys.exit(0)
+
+    progress_bar = tqdm(total=num_words, file=sys.stderr)
+    error_words = set()
+
+    def get_test_entry(word):
+        word_obj = wiki.get_wiktionary_definitions(word, verbose=False)
+        if word_obj is None:
+            word_obj = {'word': word, 'error': 'wiki lookup failed'}
+        return word_obj
+
+    with ThreadPoolExecutor(max_workers=200) as executor:
+        futures = [
+                executor.submit(get_test_entry, word)
+                for word in rand_words
+        ]
+        for future in as_completed(futures):
+            test_entry = future.result()
+            if 'error' in test_entry:
+                error_words.add(test_entry['word'])
+            print(json.dumps(test_entry))
             progress_bar.update(1)
-        if num_printed == num_words:
-            break
+
+    progress_bar.close()
+    if len(error_words) > 0:
+        print('The following words were not in wiktionary', error_words,
+              file=sys.stderr)
     

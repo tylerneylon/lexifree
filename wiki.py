@@ -46,11 +46,13 @@ def _starts_lower(s):
 def _capitalize(s):
     return ''.join([s[0].upper()] + list(s[1:]))
 
+def _err_print(*s):
+    print(*s, file=sys.stderr)
 
 # ______________________________________________________________________
 # Public functions
 
-def get_wiktionary_definitions(word):
+def get_wiktionary_definitions(word, verbose=True):
     ''' This looks up and parses definitions for `word` in wiktionary.
         On success, it returns an object of this shape:
             {'word': str, 'wiktionary_definitions': [str]}
@@ -65,14 +67,16 @@ def get_wiktionary_definitions(word):
         with request.urlopen(url) as response:
             data = response.read().decode('utf-8')
     except:
-        print(f'Error looking up the word "{word}"', file=sys.stderr)
+        if verbose:
+            _err_print(f'Error looking up the word "{word}"')
         if _starts_lower(word):
-            return get_wiktionary_definitions(_capitalize(word))
+            return get_wiktionary_definitions(_capitalize(word), verbose)
         return None
     data_obj = json.loads(data)
     defns = []
     if 'en' not in data_obj:
-        print(f'Error: no "en" block for the word "{word}"', file=sys.stderr)
+        if verbose:
+            _err_print(f'Error: no "en" block for the word "{word}"')
         if _starts_lower(word):
             return get_wiktionary_definitions(_capitalize(word))
         return None
