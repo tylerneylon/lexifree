@@ -225,10 +225,20 @@ poetic_prompt_template = '''
 
     If a base definition is_poetic, then also add a new key "poetic_definition"
     for each definition entry.
-    Aim to write each new poetic definition in the style of a novelist or
-    creative and liberal professor of language arts. Aim for a definition
+    Aim to write each new poetic definition in the style of a honed writer at
+    the peak of their craft. Concise like Strunk and White, and interesting.
+    Aim for a definition
     that is not too long but also almost inspiring and fun in its expression.
     Each poetic definition should be short.
+
+    Don't repeat the word in the poetic definition. Avoid repetition. Try to
+    use at most one adjective. These words are not allowed (DO NOT USE THEM)
+    at all in the poetic
+    definition: tarry, dance, cosmic, whisper, symphony, tapestry, weave,
+    embrace, secret, soul. Do not use any words derived from the banned words.
+    They are too cliched. Let's be more sophisticated.
+    Do not be grandiose. You don't need to use big words. Keep it simple
+    yet not plain.
 
     Please reply only with a JSON string, no other text.
 '''
