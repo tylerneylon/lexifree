@@ -197,10 +197,9 @@ dictionary_entry_prompt_template = '''
     Please provide a dictionary entry for the word "$WORD$" in JSON format.
     It should include each of these JSON keys:
     * word
-    * part_of_speech
     * pronunciation
-    * definitions - the value here is a list of objects with keys "definition"
-      and "example"
+    * definitions - the value here is a list of objects with keys
+      "part of speech", "definition", and "example"
     * origin
     * synonyms
     * antonyms
