@@ -142,12 +142,18 @@ prompt_suffix = '''
     with the word "no".
 '''
 
-def is_defn_good(defn, given_defns):
+def is_defn_good(defn, given_defns, word=None):
     ''' This expects `defn` to be a string, and given_defns to be a list of
         strings. This checks to see if `defn` matches one of the given defns.
         This returns False if `defn` is not in line with one of the given
         definitions; otherwise it returns an integer, which is the index of the
         matching given definition.'''
+
+    # Note: The input `word` here should _not_ be used in the prompt because
+    #       that could bias the model. It is an input only for debugging
+    #       purposes. If something goes sideways with a particular word, this
+    #       gives us a hook to help see what went wrong.
+
     for i in range(2):
         given_defns = '\n'.join([
             f'{i}. {defn}'
@@ -168,7 +174,11 @@ def is_defn_good(defn, given_defns):
             return False
         if not all(char.isdigit() for char in c.strip()):
             continue
-        return int(c.strip())
+        match = int(c.strip())
+        if not (0 <= match < len(given_defns)):
+            print('Warning: Out-of-range result from LLM def\'n-matching.',
+                  file=sys.stderr)
+        return match
 
     return ('Error: bad GPT response', c)
 
@@ -276,7 +286,7 @@ def find_defn_matches(words, needles, needle_type, haystacks):
     '''
 
     def do_defn_check(word, defn_idx, defn, given_defns):
-        result = is_defn_good(defn, given_defns)
+        result = is_defn_good(defn, given_defns, word)
         if type(result) is tuple:
             print(result[0], result[1], file=sys.stderr)
             print(f'  This is for defn {defn_idx} of "{word}"', file=sys.stderr)
@@ -290,7 +300,7 @@ def find_defn_matches(words, needles, needle_type, haystacks):
     pbar = tqdm(total=total, file=sys.stderr)
 
     futures = []
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    with ThreadPoolExecutor(max_workers=200) as executor:
         for word, check_defns, given_defns in zip(words, needles, haystacks):
             for i, defn in enumerate(check_defns):
                 futures.append(executor.submit(
@@ -421,6 +431,15 @@ def make_word_eval_table(
         text = 'no' if match is False else 'yes'
         text = f'<br><div class="match_{text} wiki_match">{text}</div>'
         if not (match is False):
+
+            # This may be useful for debugging.
+            if not (0 <= match < len(ai_defns)):
+                print(f'Debug info: Error noticed.')
+                print(f'Debug info: word={word}')
+                print(f'Debug info: match={match}')
+                print(f'Debug info: len(ai_defns)={len(ai_defns)}')
+                print(f'Debug info: wiki_defn={wiki_defn}')
+
             defn = ai_defns[match]['definition']
             text += f' matches:<br> <b>ai{match + 1}.</b> {defn}'
         add_item('', 'hrule', f'grid-row:{2 * i + 3}')
