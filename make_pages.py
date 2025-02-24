@@ -66,16 +66,28 @@ entry_endnote_template = '''
                 <div class="label">ORIGIN</div>
                 $ORIGIN$
             </div>
-            <div class="end-div">
-                <div class="label">SYNONYMS</div>
-                $SYNONYMS$
-            </div>
-            <div class="end-div">
-                <div class="label">ANTONYMS</div>
-                $ANTONYMS$
-            </div>
+            $SYNONYMS$
+            $ANTONYMS$
         </div>
 '''
+
+endnote_section_template = '''
+            <div class="end-div">
+                <div class="label">$TITLE$</div>
+                $CONTENT$
+            </div>
+'''
+
+def make_endnote_section(title, content_list):
+    ''' This returns the empty string if content_list is an empty list;
+        otherwise it returns endnote_section_template with the $TITLE$
+        and $CONTENT$ fields filled in based on the arguments. '''
+    if len(content_list) == 0:
+        return ''
+    section = endnote_section_template
+    section = section.replace('$TITLE$', title)
+    section = section.replace('$CONTENT$', ', '.join(content_list))
+    return section
 
 def make_page_for_entry(word, entry):
 
@@ -107,8 +119,10 @@ def make_page_for_entry(word, entry):
     # Set up the endnote: word origin, synonyms, etc.
     endnote = entry_endnote_template
     endnote = endnote.replace('$ORIGIN$', entry['origin']);
-    endnote = endnote.replace('$SYNONYMS$', ', '.join(entry['synonyms']));
-    endnote = endnote.replace('$ANTONYMS$', ', '.join(entry['antonyms']));
+    syn_section = make_endnote_section('SYNONYMS', entry['synonyms']);
+    endnote = endnote.replace('$SYNONYMS$', syn_section);
+    ant_section = make_endnote_section('ANTONYMS', entry['antonyms']);
+    endnote = endnote.replace('$ANTONYMS$', ant_section);
     html = html.replace('$ENDNOTE$', endnote)
 
     with open(f'html/{word}.html', 'w') as f:
