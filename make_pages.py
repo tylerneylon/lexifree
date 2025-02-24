@@ -146,13 +146,15 @@ def make_index_page(words):
 
     # Create the HTML sections for each letter.
     index_html = []
+    ind = ' ' * 8  # Indent.
     for letter in sorted(words_by_letter.keys()):
-        index_html.append(f'<div class="letter-section">')
-        index_html.append(f'  <div class="letter">{letter}</div>')
-        index_html.append( '  <div class="word-list">')
+        index_html.append(ind + f'<div class="letter-section">')
+        index_html.append(ind + f'  <div class="letter">{letter}</div>')
+        index_html.append(ind +  '  <div class="word-list">')
         for word in words_by_letter[letter]:
-            index_html.append(f'    <a href="{word}.html">{word}</a>')
-        index_html.append('  </div>\n  </div>\n</div>')
+            index_html.append(ind + f'    <a href="{word}.html">{word}</a>')
+        index_html.append(ind + '  </div>')
+        index_html.append(ind + '</div>')
     html = html.replace('$WORD_INDEX$', '\n'.join(index_html))
 
     # Save the index html to disk.
