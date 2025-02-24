@@ -15,3 +15,4 @@ results*.json
 google_defs.json
 _checkpoints/
 iterate_toward_v0_2.ipynb
+_evals/
