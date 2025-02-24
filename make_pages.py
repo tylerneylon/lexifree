@@ -20,6 +20,7 @@
 # Imports
 
 import json
+from collections import defaultdict
 
 
 # ______________________________________________________________________
@@ -58,8 +59,6 @@ poetic_defn_template = '''
                 </div>
 '''
 
-# TODO: If any of these are missing from the entry, drop the section entirely
-#       rather than having a header with nothing below it.
 entry_endnote_template = '''
         <div class="origin-synonyms">
             <div class="end-div">
@@ -128,6 +127,38 @@ def make_page_for_entry(word, entry):
     with open(f'html/{word}.html', 'w') as f:
         f.write(html)
 
+def make_index_page(words):
+    ''' Given a list of words, generate the HTML content for the word index and save it
+        disk in the html/ directory.
+
+        The words are sorted and grouped under their starting letter.
+    '''
+
+    # Load the template.
+    with open('templates/index_page_template.html') as f:
+        html = f.read()
+
+    # Sort words and categorize them by their starting letter.
+    words_by_letter = defaultdict(list)
+    for word in sorted(words, key=str.lower):
+        first_letter = word[0].lower()
+        words_by_letter[first_letter].append(word)
+
+    # Create the HTML sections for each letter.
+    index_html = []
+    for letter in sorted(words_by_letter.keys()):
+        index_html.append(f'<div class="letter-section">')
+        index_html.append(f'  <div class="letter">{letter}</div>')
+        index_html.append( '  <div class="word-list">')
+        for word in words_by_letter[letter]:
+            index_html.append(f'    <a href="{word}.html">{word}</a>')
+        index_html.append('  </div>\n  </div>\n</div>')
+    html = html.replace('$WORD_INDEX$', '\n'.join(index_html))
+
+    # Save the index html to disk.
+    with open('html/word_index.html', 'w') as f:
+        f.write(html)
+
 
 # ______________________________________________________________________
 # Main
@@ -157,3 +188,6 @@ if __name__ == '__main__':
     # Make all the pages.
     for word in gpt_data:
         make_page_for_entry(word, gpt_data[word])
+
+    # Make the index page.
+    make_index_page(list(gpt_data))
