@@ -36,6 +36,7 @@ single_defn_template = '''
         <div class="definition-row">
             <div class="left-col">
                 <div class="definition-block">
+                    $POS_DIV$
                     <strong>$DEFINITION$</strong>
                     <div class="example">
                         $EXAMPLE$
@@ -93,6 +94,17 @@ def make_page_for_entry(word, entry):
     html = html_template
     html = html.replace('$WORD$', word)
 
+    # Check to see if there's only one part of speech.
+    parts_of_speech = {
+            defn_obj.get('part of speech', defn_obj.get('part_of_speech', None))
+            for defn_obj in entry['definitions']
+    }
+    single_pos = ''
+    if len(parts_of_speech) == 1:
+        single_pos = next(iter(parts_of_speech))
+        single_pos = f'<div class="pos">{single_pos}</div>'
+    html = html.replace('$SINGLE_POS$', single_pos)
+
     # Set up the pronunciation.
     pronun = entry['pronunciation']
     if not pronun.startswith('/'):
@@ -103,6 +115,21 @@ def make_page_for_entry(word, entry):
     defn_strs = []
     for defn_obj in entry['definitions']:
         defn_str = single_defn_template
+
+        # TODO: Instead of needing this here, filter in make_entries.py.
+        part_of_speech = None
+        good_key = 'part of speech'
+        bad_key  = good_key.replace(' ', '_')
+        part_of_speech = defn_obj.get(good_key, defn_obj.get(bad_key, None))
+
+        if single_pos != '':
+            part_of_speech = ''
+
+        if part_of_speech:
+            pos_div = f'<div class="pos">{part_of_speech}</div>'
+        else:
+            pos_div = ''
+        defn_str = defn_str.replace('$POS_DIV$', pos_div)
         defn_str = defn_str.replace('$DEFINITION$', defn_obj['definition'])
         defn_str = defn_str.replace('$EXAMPLE$', defn_obj['example'])
         if 'poetic_definition' in defn_obj:
