@@ -35,6 +35,9 @@
 
     https://www.kaggle.com/datasets/rtatman/english-word-frequency
 '''
+# TODO: Add some editing on the json schema I get back from GPT.
+#       For starters, if I see the key part_of_speech, convert to the
+#       spaces version. (Or convert all to the underscore version.)
 
 
 # ______________________________________________________________________
