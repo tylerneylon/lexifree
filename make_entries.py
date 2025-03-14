@@ -69,8 +69,8 @@ do_print_defn_replacements = False
 # indicate work-in-progress. These may span multiple git hashes.
 VERSION = '0.1.1'
 
-PROMPT_TOKEN_COST = (2.5 / 1e6)     # That's $2.5 / 1m tokens.
-COMPLETION_TOKEN_COST = (10 / 1e6)  # That's $ 10 / 1m tokens.
+PROMPT_TOKEN_COST     = ( 2.5 / 1e6)  # That's $ 2.5 / 1m tokens.
+COMPLETION_TOKEN_COST = (10   / 1e6)  # That's $10   / 1m tokens.
 
 
 # ______________________________________________________________________
@@ -134,6 +134,8 @@ def get_gpt4o_response(prompt, cost=None, require_json=False):
     try:
         completion = client.chat.completions.create(
             model='gpt-4o',
+            # I had tried out 4o-mini, and it didn't work as well.
+            # model='gpt-4o-mini-2024-07-18',
             messages=[
                 {'role': 'system', 'content': 'You are a helpful assistant.'},
                 {'role': 'user', 'content': prompt}
@@ -194,6 +196,12 @@ def check_if_derived(word, cost=None):
     data = json.loads(response.choices[0].message.content)
     is_derived = data['is_derived']
     root_word = data['root_word'] if is_derived else None
+
+    # Sometimes gpt will say a word is derived from itself, which can cause us
+    # to loop, and is clearly a mistake. Let's avoid that.
+    if is_derived and root_word == word:
+        return False, None
+
     return is_derived, root_word
 
 dictionary_entry_prompt_template = '''
@@ -224,24 +232,47 @@ poetic_prompt_template = '''
     definitions at all. Instead, only add entries per base definition.
     At first, only add the key "is_poetic" with a
     true/false value to indicate if this is poetry-worthy definition. Boring
-    ideas or concepts are not poetic. Interesting words or ideas are.
+    ideas or concepts are not poetic. Especially interesting words or ideas are.
 
     If a base definition is_poetic, then also add a new key "poetic_definition"
     for each definition entry.
-    Aim to write each new poetic definition in the style of a honed writer at
-    the peak of their craft. Concise like Strunk and White, and interesting.
+    Aim to write each new poetic definition in the style of a good journalist
+    with personality. Concise like Strunk and White, and interesting.
     Aim for a definition
     that is not too long but also almost inspiring and fun in its expression.
-    Each poetic definition should be short.
+    Each poetic definition should be short. Do not use flowery language.
+    Minimize adverbs and adjectives. Only use one clause, not multiple clauses.
+    Metaphors are fine; no similes.
 
     Don't repeat the word in the poetic definition. Avoid repetition. Try to
     use at most one adjective. These words are not allowed (DO NOT USE THEM)
     at all in the poetic
     definition: tarry, dance, cosmic, whisper, symphony, tapestry, weave,
-    embrace, secret, soul. Do not use any words derived from the banned words.
-    They are too cliched. Let's be more sophisticated.
+    embrace, secret, soul, eternal. Do not use any words derived from the banned
+    words.  They are too cliched. Let's be more sophisticated.
     Do not be grandiose. You don't need to use big words. Keep it simple
-    yet not plain.
+    yet not plain. Not flowery, not like a beginner's poem. Simply creative,
+    fascinating, unusual, with personality.
+
+    Aim for natural, direct, and precise language. Almost no adjectives.
+
+    Even though it may not be a complete sentence, begin the poetic definition
+    with a capital letter, and end it with a final punction (like a sentence).
+
+    Here are some good poetic definitions:
+
+    "eon:" time beyond reckoning (very short yet meaningful and a nod to an
+        emotion)
+    "autumn:" the wind blows, a leaf falls (haiku-ish, no simile)
+    "cat:" furry knaves of pomp and flounce (humorous use of slightly formal
+        terms, funny bc they are at odds with the cute and accessible nature of
+        the subject)
+
+    Here are some bad poetic definitions:
+
+    DON'T DO THIS "storm:" The sky unfurled its dark wings, a somber dance of
+        shadows and eternal whispers. (bad: flowery, florid, too long, a full
+        sentence, multiple clauses)
 
     Please reply only with a JSON string, no other text.
 '''
