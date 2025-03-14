@@ -430,18 +430,27 @@ def make_word_eval_table(
         match = wiki_matches[i]
         text = 'no' if match is False else 'yes'
         text = f'<br><div class="match_{text} wiki_match">{text}</div>'
-        if not (match is False):
+        if not (match is False):  # It's ok if match is 0.
 
-            # This may be useful for debugging.
             if not (0 <= match < len(ai_defns)):
+
+                # This may be useful for debugging.
                 print(f'Debug info: Error noticed.')
+                print(f'GPT entry:')
+                print(json.dumps(gpt_entry, indent=4))
                 print(f'Debug info: word={word}')
                 print(f'Debug info: match={match}')
                 print(f'Debug info: len(ai_defns)={len(ai_defns)}')
                 print(f'Debug info: wiki_defn={wiki_defn}')
 
-            defn = ai_defns[match]['definition']
-            text += f' matches:<br> <b>ai{match + 1}.</b> {defn}'
+                text += '<span class="error-msg">'
+                text += 'match index out of range'
+                text += '</span>'
+
+            else:
+                defn = ai_defns[match]['definition']
+                text += f' matches:<br> <b>ai{match + 1}.</b> {defn}'
+
         add_item('', 'hrule', f'grid-row:{2 * i + 3}')
         add_item(f'<b>wiki{i + 1}.</b> ' + wiki_defn + text)
 
