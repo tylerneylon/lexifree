@@ -29,6 +29,10 @@
 
     The above performs a lookup for WORD.
 
+    Options:
+
+        --keep  Preserves existing entries, only adds entries for new words.
+
     TODO Add information on how to use this as a library.
 
     The unigram dataset was downloaded from here:
@@ -401,6 +405,12 @@ if __name__ == '__main__':
         print(__doc__)
         sys.exit(0)
 
+    # Check for the --keep flag.
+    do_skip_prev_entries = '--keep' in sys.argv
+    if do_skip_prev_entries:
+        # Remove --keep from argv to simplify further processing.
+        sys.argv.remove('--keep')
+
     # Check the command-line arguments.
     if len(sys.argv) < 2:
         print_docs_and_exit()
@@ -428,11 +438,31 @@ if __name__ == '__main__':
         wordlist = load_wordlist()  # Load our word list.
         words = wordlist[start:end]
 
+    # If --keep flag is present, filter out words that already have entries.
+    if do_skip_prev_entries and Path('entries.json').exists():
+        existing_words = set()
+        with open('entries.json', 'r') as f:
+            for line in f:
+                entry = json.loads(line)
+                existing_words.add(entry['word'])
+        
+        # Filter out words that already have entries.
+        original_count = len(words)
+        words = [word for word in words if word not in existing_words]
+        if original_count > len(words):
+            num_skipped = original_count - len(words)
+            print(f'Skipping {num_skipped} word(s) with existing entries.')
+
     # If there's only one word, don't be fancy about it.
     pbar = None
     if len(words) == 1:
         with open('entries.json', 'a') as f:
             build_entry(words[0], f)
+        sys.exit(0)
+
+    # If no words need processing, exit.
+    if len(words) == 0:
+        print('No new words to process.')
         sys.exit(0)
 
     # Get dictionary data for the given words.
