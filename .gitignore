@@ -7,12 +7,18 @@ html/
 index.html
 __pycache__/
 _tmp/
-test*.json
 .latest.txt
 _scratch/
 _tmp*
-results*.json
 google_defs.json
 _checkpoints/
 iterate_toward_v0_2.ipynb
 _evals/
+
+# Exclude local working files.
+test*.json
+results*.json
+
+# But include saved evals, along with their source data.
+!evals/**/*.json
+
