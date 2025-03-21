@@ -60,8 +60,6 @@ def load_entry_data(style='raw'):
             `redirects` is a dict mapping words to their base words.
             `errors` is a dict mapping words to their error messages.
     '''
-    # TODO: Implement the 'indexed' version and use that elsewhere, including in
-    #       check_entry.
 
     # Basic input-checking.
     assert style in ['raw', 'indexed']
