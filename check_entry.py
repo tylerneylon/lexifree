@@ -8,6 +8,7 @@
 
         ./check_entry.py success  # Pretty prints the entry for "success".
 '''
+# TODO: Merge this functionality all into tools.py.
 
 
 # ______________________________________________________________________

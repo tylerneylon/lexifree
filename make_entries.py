@@ -71,7 +71,7 @@ do_print_defn_replacements = False
 # Use the format a.b only for officially-tagged releases; these should
 # be single git hashes only. Otherwise use a format like a.b.c to help
 # indicate work-in-progress. These may span multiple git hashes.
-VERSION = '0.1.1'
+VERSION = '0.2'
 
 PROMPT_TOKEN_COST     = ( 2.5 / 1e6)  # That's $ 2.5 / 1m tokens.
 COMPLETION_TOKEN_COST = (10   / 1e6)  # That's $10   / 1m tokens.
