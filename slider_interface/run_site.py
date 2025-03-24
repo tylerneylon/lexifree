@@ -17,6 +17,7 @@
 # Imports
 
 import shotglass
+from glob import glob
 
 
 # _______________________________________________________________________
@@ -54,9 +55,11 @@ if __name__ == '__main__':
     # shotglass.set_basic_auth(True, 'user', 'pass')
 
     shotglass.register_routes(GET_routes, POST_routes)
-    shotglass.add_static_paths([
-        'index.html',
-        'words.json'
-    ])
+    shotglass.add_static_paths(
+            [
+                'index.html',
+                'words.json'
+            ] + glob('*.css') + glob('*.js')
+    )
 
     shotglass.run_server()
