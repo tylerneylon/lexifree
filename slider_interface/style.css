@@ -13,30 +13,31 @@ body {
     align-items: center;
 }
 
+.slider-section {
+    display: flex;
+    align-items: center;
+    width: 650px; /* Total width to fit 600px slider plus letters */
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
 .slider-container {
     position: relative;
-    width: 600px;
+    width: 600px; /* Same width as display area */
     height: 50px;
     background: linear-gradient(to bottom, #d7ccc8, #bcaaa4);
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    margin-bottom: 15px;
     border: 1px solid #a1887f;
+    margin: 0 10px; /* Space for letters on either side */
 }
 
-.alphabet-markers {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    padding: 0 10px;
-    box-sizing: border-box;
-    position: absolute;
-    bottom: 5px;
-}
-
-.alphabet-markers span {
+.letter-marker {
     font-weight: bold;
     color: #4e342e;
+    flex-shrink: 0;
+    width: 15px;
+    text-align: center;
 }
 
 .slider-handle {
