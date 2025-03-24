@@ -1,7 +1,7 @@
-// Load wordList from server
+// This array stores all dictionary words loaded from the server.
 let wordList = [];
 
-// Fetch words from the server
+// Fetch words from the server when the page loads.
 fetch("/words.json")
   .then((response) => {
     if (!response.ok) {
@@ -17,61 +17,59 @@ fetch("/words.json")
     console.error("Error loading words:", error);
   });
 
-// Initialize variables
+// DOM elements used throughout the interface.
 const sliderHandle = document.getElementById("sliderHandle");
 const displayArea = document.getElementById("displayArea");
 const column1 = document.getElementById("column1");
 const column2 = document.getElementById("column2");
 const column3 = document.getElementById("column3");
-
 const sliderContainer = document.querySelector(".slider-container");
+
+// Measurements for slider behavior and word display.
 let sliderWidth = sliderContainer.offsetWidth;
 const handleWidth = sliderHandle.offsetWidth;
 
-// Calculate rows based on display area height
-function calculateRows() {
-  const displayHeight = displayArea.offsetHeight;
-  // Approximate height of each word item (font-size + padding)
-  const wordItemHeight = 24;
-  return Math.floor(displayHeight / wordItemHeight);
-}
-
-let rowsPerColumn = calculateRows();
-let wordsPerPage = rowsPerColumn * 3;
-
-// Update display on window resize
-window.addEventListener("resize", () => {
-  rowsPerColumn = calculateRows();
-  wordsPerPage = rowsPerColumn * 3;
-  updateDisplay(currentPosition);
-});
-
-// Initialize slider position
+// Variables tracking the current state of the interface.
 let isDragging = false;
 let startX = 0;
 let currentPosition = 0;
+let rowsPerColumn = calculateRows();
+let wordsPerPage = rowsPerColumn * 3;
 
-// Update displayed words based on slider position with pagination
+/**
+ * Calculates how many rows of words can fit in each column.
+ * @returns {number} The number of rows that fit in each column.
+ */
+function calculateRows() {
+  const displayHeight = displayArea.offsetHeight;
+  const wordItemHeight = 24;  // Approximate height of each word item in pixels.
+  return Math.floor(displayHeight / wordItemHeight);
+}
+
+/**
+ * Updates the displayed words based on the slider position.
+ * @param {number} position - The current slider position in pixels.
+ */
 function updateDisplay(position) {
-  // Calculate which page to show (0 to 1 position)
+  // Normalize the position to a value between 0 and 1.
   const normalizedPosition = position / (sliderWidth - handleWidth);
-  const wordsPerPage = rowsPerColumn * 3;
   const totalPages = Math.ceil(wordList.length / wordsPerPage);
-
-  // Find the closest page to the current position
+  
+  // Find the page index that corresponds to the current position.
   let pageIndex = Math.floor(normalizedPosition * totalPages);
   if (pageIndex >= totalPages) pageIndex = totalPages - 1;
-
-  // Calculate the start index for this page
+  
+  // Calculate the starting index for the current page.
   const startIndex = pageIndex * wordsPerPage;
-
-  // Clear columns
+  
+  // Clear all three columns before populating them again.
   column1.innerHTML = "";
   column2.innerHTML = "";
   column3.innerHTML = "";
-
-  // Fill columns
+  
+   // Populate each column with words.
   for (let i = 0; i < rowsPerColumn; i++) {
+    // First column.
     if (startIndex + i < wordList.length) {
       const wordItem = document.createElement("div");
       wordItem.className = "word-item";
@@ -79,6 +77,7 @@ function updateDisplay(position) {
       column1.appendChild(wordItem);
     }
 
+    // Second column.
     if (startIndex + rowsPerColumn + i < wordList.length) {
       const wordItem = document.createElement("div");
       wordItem.className = "word-item";
@@ -86,6 +85,7 @@ function updateDisplay(position) {
       column2.appendChild(wordItem);
     }
 
+    // Third column.
     if (startIndex + 2 * rowsPerColumn + i < wordList.length) {
       const wordItem = document.createElement("div");
       wordItem.className = "word-item";
@@ -95,23 +95,22 @@ function updateDisplay(position) {
   }
 }
 
-// Set initial slider position and display
+/**
+ * Sets the slider position and updates the word display.
+ * @param {number} x - The x-coordinate to position the slider at.
+ */
 function setSliderPosition(x) {
+  // Ensure the position stays within valid bounds.
   const newPosition = Math.max(0, Math.min(sliderWidth - handleWidth, x));
   sliderHandle.style.left = `${newPosition}px`;
   currentPosition = newPosition;
   updateDisplay(currentPosition);
 }
 
-// Mouse and touch event handlers for dragging
-sliderHandle.addEventListener("mousedown", (e) => {
-  isDragging = true;
-  startX = e.clientX - sliderHandle.getBoundingClientRect().left;
-  document.addEventListener("mousemove", onMouseMove);
-  document.addEventListener("mouseup", onMouseUp);
-  e.preventDefault();
-});
-
+/**
+ * Handles mouse movement during drag operations.
+ * @param {MouseEvent} e - The mouse event object.
+ */
 function onMouseMove(e) {
   if (isDragging) {
     const containerRect = sliderContainer.getBoundingClientRect();
@@ -120,21 +119,19 @@ function onMouseMove(e) {
   }
 }
 
+/**
+ * Handles the end of a mouse drag operation.
+ */
 function onMouseUp() {
   isDragging = false;
   document.removeEventListener("mousemove", onMouseMove);
   document.removeEventListener("mouseup", onMouseUp);
 }
 
-// Touch support for mobile devices
-sliderHandle.addEventListener("touchstart", (e) => {
-  isDragging = true;
-  startX = e.touches[0].clientX - sliderHandle.getBoundingClientRect().left;
-  document.addEventListener("touchmove", onTouchMove, { passive: false });
-  document.addEventListener("touchend", onTouchEnd);
-  e.preventDefault();
-});
-
+/**
+ * Handles touch movement for mobile devices.
+ * @param {TouchEvent} e - The touch event object.
+ */
 function onTouchMove(e) {
   if (isDragging) {
     const containerRect = sliderContainer.getBoundingClientRect();
@@ -144,13 +141,57 @@ function onTouchMove(e) {
   }
 }
 
+/**
+ * Handles the end of a touch operation.
+ */
 function onTouchEnd() {
   isDragging = false;
   document.removeEventListener("touchmove", onTouchMove);
   document.removeEventListener("touchend", onTouchEnd);
 }
 
-// Allow clicking on the slider container to jump to that position
+/**
+ * Sets up the interface after words are loaded.
+ */
+function initializeInterface() {
+  // Initialize the display with the slider at position 0.
+  setSliderPosition(0);
+  
+  // Handle window resize events to maintain proper slider proportions.
+  window.addEventListener("resize", () => {
+    const containerWidth = sliderContainer.offsetWidth;
+    const ratio = currentPosition / (sliderWidth - handleWidth);
+    sliderWidth = containerWidth;
+    setSliderPosition(ratio * (sliderWidth - handleWidth));
+  });
+}
+
+// Update the display upon window resizes.
+window.addEventListener("resize", () => {
+  rowsPerColumn = calculateRows();
+  wordsPerPage = rowsPerColumn * 3;
+  updateDisplay(currentPosition);
+});
+
+// Set up mouse event listeners for the slider handle.
+sliderHandle.addEventListener("mousedown", (e) => {
+  isDragging = true;
+  startX = e.clientX - sliderHandle.getBoundingClientRect().left;
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+  e.preventDefault();
+});
+
+// Set up touch event listeners for mobile devices.
+sliderHandle.addEventListener("touchstart", (e) => {
+  isDragging = true;
+  startX = e.touches[0].clientX - sliderHandle.getBoundingClientRect().left;
+  document.addEventListener("touchmove", onTouchMove, { passive: false });
+  document.addEventListener("touchend", onTouchEnd);
+  e.preventDefault();
+});
+
+// Allow clicking on the slider container to jump to that position.
 sliderContainer.addEventListener("mousedown", (e) => {
   if (e.target !== sliderHandle) {
     const containerRect = sliderContainer.getBoundingClientRect();
@@ -162,17 +203,3 @@ sliderContainer.addEventListener("mousedown", (e) => {
     document.addEventListener("mouseup", onMouseUp);
   }
 });
-
-// Initialize the interface after words are loaded
-function initializeInterface() {
-  // Initialize the display
-  setSliderPosition(0);
-
-  // Handle window resize
-  window.addEventListener("resize", () => {
-    const containerWidth = sliderContainer.offsetWidth;
-    const ratio = currentPosition / (sliderWidth - handleWidth);
-    sliderWidth = containerWidth;
-    setSliderPosition(ratio * (sliderWidth - handleWidth));
-  });
-}
