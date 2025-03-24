@@ -151,9 +151,63 @@ function onTouchEnd() {
 }
 
 /**
+ * Creates dividers for each letter transition using the word distribution.
+ */
+function createLetterDividers() {
+  // Bail out if the word list is empty.
+  if (wordList.length === 0) return;
+  
+  const letterDividersContainer = document.getElementById("letterDividers");
+  letterDividersContainer.innerHTML = '';
+  
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const containerWidth = sliderContainer.offsetWidth;
+  const availableWidth = containerWidth - handleWidth;
+  
+  // Find the indices where each letter starts in the word list.
+  const letterIndices = {};
+  
+  // Initialize with -1 to indicate no words start with this letter.
+  for (let i = 0; i < alphabet.length; i++) {
+    letterIndices[alphabet[i]] = -1;
+  }
+  
+  // Find the first occurrence of each letter.
+  for (let i = 0; i < wordList.length; i++) {
+    const firstChar = wordList[i].charAt(0).toUpperCase();
+    if (alphabet.includes(firstChar) && letterIndices[firstChar] === -1) {
+      letterIndices[firstChar] = i;
+    }
+  }
+  
+  // Create dividers for letter transitions.
+  for (let i = 1; i < alphabet.length; i++) {
+    const currentLetter = alphabet[i];
+    const prevLetter = alphabet[i-1];
+    
+    // Skip if we don't have words that start with the current letter.
+    if (letterIndices[currentLetter] === -1) continue;
+    
+    // Calculate position based on word distribution.
+    const letterPosition = letterIndices[currentLetter] / wordList.length;
+    const position = letterPosition * availableWidth + handleWidth / 2;
+    
+    const divider = document.createElement("div");
+    divider.className = "letter-divider";
+    divider.style.left = `${position}px`;
+    divider.title = `${prevLetter}-${currentLetter} transition`;
+    
+    letterDividersContainer.appendChild(divider);
+  }
+}
+
+/**
  * Sets up the interface after words are loaded.
  */
 function initializeInterface() {
+  // Create letter dividers.
+  createLetterDividers();
+  
   // Initialize the display with the slider at position 0.
   setSliderPosition(0);
   
@@ -163,6 +217,9 @@ function initializeInterface() {
     const ratio = currentPosition / (sliderWidth - handleWidth);
     sliderWidth = containerWidth;
     setSliderPosition(ratio * (sliderWidth - handleWidth));
+    
+    // Re-create letter dividers when window is resized.
+    createLetterDividers();
   });
 }
 
@@ -171,6 +228,7 @@ window.addEventListener("resize", () => {
   rowsPerColumn = calculateRows();
   wordsPerPage = rowsPerColumn * 3;
   updateDisplay(currentPosition);
+  createLetterDividers();
 });
 
 // Set up mouse event listeners for the slider handle.
