@@ -91,9 +91,19 @@ body {
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    display: flex;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     border: 1px solid #d7ccc8;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: thin;
+}
+
+.page-container {
+    display: flex;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    min-height: 350px;
+    width: 100%;
 }
 
 .word-column {

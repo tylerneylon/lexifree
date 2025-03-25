@@ -47,6 +47,46 @@ function calculateRows() {
 }
 
 /**
+ * Creates a page of words with three columns.
+ * @param {number} pageIndex - The index of the page to create.
+ * @returns {HTMLElement} - The created page container.
+ */
+function createPage(pageIndex) {
+  const pageContainer = document.createElement("div");
+  pageContainer.className = "page-container";
+  
+  // Calculate the starting index for this page.
+  const startIndex = pageIndex * wordsPerPage;
+  
+  // Create three columns for the page.
+  const pageCols = [0, 1, 2].map(() => {
+    const col = document.createElement("div");
+    col.className = "word-column";
+    return col;
+  });
+  
+  // Populate each column with words.
+  for (let i = 0; i < rowsPerColumn; i++) {
+    // Add words to each of the three columns.
+    for (let colIndex = 0; colIndex < 3; colIndex++) {
+      const wordIndex = startIndex + colIndex * rowsPerColumn + i;
+      
+      if (wordIndex < wordList.length) {
+        const wordItem = document.createElement("div");
+        wordItem.className = "word-item";
+        wordItem.textContent = wordList[wordIndex];
+        pageCols[colIndex].appendChild(wordItem);
+      }
+    }
+  }
+  
+  // Add all columns to the page container.
+  pageCols.forEach(col => pageContainer.appendChild(col));
+  
+  return pageContainer;
+}
+
+/**
  * Updates the displayed words based on the slider position.
  * @param {number} position - The current slider position in pixels.
  */
@@ -59,52 +99,97 @@ function updateDisplay(position) {
   let pageIndex = Math.floor(normalizedPosition * totalPages);
   if (pageIndex >= totalPages) pageIndex = totalPages - 1;
   
-  // Calculate the starting index for the current page.
-  const startIndex = pageIndex * wordsPerPage;
+  // Clear the display area.
+  displayArea.innerHTML = "";
   
-  // Clear all three columns before populating them again.
-  column1.innerHTML = "";
-  column2.innerHTML = "";
-  column3.innerHTML = "";
+  // Determine which pages to show.
+  const pagesToCreate = [];
   
-   // Populate each column with words.
-  for (let i = 0; i < rowsPerColumn; i++) {
-    // First column.
-    if (startIndex + i < wordList.length) {
-      const wordItem = document.createElement("div");
-      wordItem.className = "word-item";
-      wordItem.textContent = wordList[startIndex + i];
-      column1.appendChild(wordItem);
-    }
-
-    // Second column.
-    if (startIndex + rowsPerColumn + i < wordList.length) {
-      const wordItem = document.createElement("div");
-      wordItem.className = "word-item";
-      wordItem.textContent = wordList[startIndex + rowsPerColumn + i];
-      column2.appendChild(wordItem);
-    }
-
-    // Third column.
-    if (startIndex + 2 * rowsPerColumn + i < wordList.length) {
-      const wordItem = document.createElement("div");
-      wordItem.className = "word-item";
-      wordItem.textContent = wordList[startIndex + 2 * rowsPerColumn + i];
-      column3.appendChild(wordItem);
-    }
+  // Add previous page if not on first page.
+  if (pageIndex > 0) {
+    pagesToCreate.push(pageIndex - 1);
   }
+  
+  // Always add current page.
+  pagesToCreate.push(pageIndex);
+  
+  // Add next page if not on last page.
+  if (pageIndex < totalPages - 1) {
+    pagesToCreate.push(pageIndex + 1);
+  }
+  
+  // Create and add pages to the display area.
+  pagesToCreate.forEach(index => {
+    const page = createPage(index);
+    // Store the page index as a data attribute.
+    page.dataset.pageIndex = index;
+    displayArea.appendChild(page);
+  });
+  
+  // Scroll to current page (middle page, or first if only 2 pages).
+  const scrollIndex = pageIndex > 0 ? 1 : 0;
+  const scrollTarget = displayArea.children[scrollIndex];
+  
+  // Scroll without smooth behavior for initial position.
+  scrollTarget.scrollIntoView({ behavior: 'auto', block: 'start' });
 }
 
 /**
  * Sets the slider position and updates the word display.
  * @param {number} x - The x-coordinate to position the slider at.
+ * @param {boolean} [updateWords=true] - Whether to update the word display.
  */
-function setSliderPosition(x) {
+function setSliderPosition(x, updateWords = true) {
   // Ensure the position stays within valid bounds.
   const newPosition = Math.max(0, Math.min(sliderWidth - handleWidth, x));
   sliderHandle.style.left = `${newPosition}px`;
   currentPosition = newPosition;
-  updateDisplay(currentPosition);
+  
+  if (updateWords) {
+    updateDisplay(currentPosition);
+  }
+}
+
+/**
+ * Sync slider position with the currently visible page.
+ */
+function syncSliderWithScroll() {
+  // Calculate the middle point of the display area.
+  const middleY = displayArea.scrollTop + displayArea.offsetHeight / 2;
+  let visiblePage = null;
+  
+  // Find which page contains the middle point.
+  for (let i = 0; i < displayArea.children.length; i++) {
+    const page = displayArea.children[i];
+    const pageTop = page.offsetTop;
+    const pageBottom = pageTop + page.offsetHeight;
+    
+    // Check if this page contains the middle point.
+    if (middleY >= pageTop && middleY < pageBottom) {
+      visiblePage = page;
+      break;
+    }
+  }
+  
+  // Default to first page if no page is found at the middle.
+  if (!visiblePage && displayArea.children.length > 0) {
+    visiblePage = displayArea.children[0];
+  }
+  
+  if (visiblePage) {
+    // Get the page index from the data attribute.
+    const pageIndex = parseInt(visiblePage.dataset.pageIndex, 10);
+    const totalPages = Math.ceil(wordList.length / wordsPerPage);
+    
+    // Calculate normalized position (0 to 1).
+    const normalizedPosition = pageIndex / (totalPages === 1 ? 1 : totalPages - 1);
+    
+    // Convert to slider position.
+    const newPosition = normalizedPosition * (sliderWidth - handleWidth);
+    
+    // Update slider without triggering display update to avoid feedback loop.
+    setSliderPosition(newPosition, false);
+  }
 }
 
 /**
@@ -210,6 +295,12 @@ function initializeInterface() {
   
   // Initialize the display with the slider at position 0.
   setSliderPosition(0);
+  
+  // Add scroll event listener to sync slider position.
+  displayArea.addEventListener("scroll", () => {
+    // Use requestAnimationFrame to optimize performance.
+    requestAnimationFrame(syncSliderWithScroll);
+  });
   
   // Handle window resize events to maintain proper slider proportions.
   window.addEventListener("resize", () => {
