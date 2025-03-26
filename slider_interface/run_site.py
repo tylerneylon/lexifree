@@ -56,10 +56,7 @@ if __name__ == '__main__':
 
     shotglass.register_routes(GET_routes, POST_routes)
     shotglass.add_static_paths(
-            [
-                'index.html',
-                'words.json'
-            ] + glob('*.css') + glob('*.js')
+            ['index.html'] + glob('*.json') + glob('*.css') + glob('*.js')
     )
 
     shotglass.run_server()
