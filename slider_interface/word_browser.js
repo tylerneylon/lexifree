@@ -87,6 +87,23 @@ function createPage(pageIndex) {
 }
 
 /**
+ * Initial load of all word pages at once.
+ */
+function loadAllPages() {
+  // Clear the display area.
+  displayArea.innerHTML = "";
+  const totalPages = Math.ceil(wordList.length / wordsPerPage);
+  
+  // Create and add all pages to the display area.
+  for (let i = 0; i < totalPages; i++) {
+    const page = createPage(i);
+    // Store the page index as a data attribute.
+    page.dataset.pageIndex = i;
+    displayArea.appendChild(page);
+  }
+}
+
+/**
  * Updates the displayed words based on the slider position.
  * @param {number} position - The current slider position in pixels.
  */
@@ -99,39 +116,13 @@ function updateDisplay(position) {
   let pageIndex = Math.floor(normalizedPosition * totalPages);
   if (pageIndex >= totalPages) pageIndex = totalPages - 1;
   
-  // Clear the display area.
-  displayArea.innerHTML = "";
+  // Find the target page element.
+  const targetPage = displayArea.querySelector(`.page-container[data-page-index="${pageIndex}"]`);
   
-  // Determine which pages to show.
-  const pagesToCreate = [];
-  
-  // Add previous page if not on first page.
-  if (pageIndex > 0) {
-    pagesToCreate.push(pageIndex - 1);
+  if (targetPage) {
+    // Scroll to the target page without smooth behavior.
+    targetPage.scrollIntoView({ behavior: 'auto', block: 'start' });
   }
-  
-  // Always add current page.
-  pagesToCreate.push(pageIndex);
-  
-  // Add next page if not on last page.
-  if (pageIndex < totalPages - 1) {
-    pagesToCreate.push(pageIndex + 1);
-  }
-  
-  // Create and add pages to the display area.
-  pagesToCreate.forEach(index => {
-    const page = createPage(index);
-    // Store the page index as a data attribute.
-    page.dataset.pageIndex = index;
-    displayArea.appendChild(page);
-  });
-  
-  // Scroll to current page (middle page, or first if only 2 pages).
-  const scrollIndex = pageIndex > 0 ? 1 : 0;
-  const scrollTarget = displayArea.children[scrollIndex];
-  
-  // Scroll without smooth behavior for initial position.
-  scrollTarget.scrollIntoView({ behavior: 'auto', block: 'start' });
 }
 
 /**
@@ -154,31 +145,16 @@ function setSliderPosition(x, updateWords = true) {
  * Sync slider position with the currently visible page.
  */
 function syncSliderWithScroll() {
-  // Calculate the middle point of the display area.
-  const middleY = displayArea.scrollTop + displayArea.offsetHeight / 2;
-  let visiblePage = null;
+  if (displayArea.children.length === 0) return;
   
-  // Find which page contains the middle point.
-  for (let i = 0; i < displayArea.children.length; i++) {
-    const page = displayArea.children[i];
-    const pageTop = page.offsetTop;
-    const pageBottom = pageTop + page.offsetHeight;
-    
-    // Check if this page contains the middle point.
-    if (middleY >= pageTop && middleY < pageBottom) {
-      visiblePage = page;
-      break;
-    }
-  }
+  // Get the height of a page.
+  const pageHeight = displayArea.children[0].offsetHeight;
   
-  // Default to first page if no page is found at the middle.
-  if (!visiblePage && displayArea.children.length > 0) {
-    visiblePage = displayArea.children[0];
-  }
+  // Calculate which page is in the middle of the display area.
+  const pageIndex = Math.floor((displayArea.scrollTop + (displayArea.offsetHeight / 2)) / pageHeight);
   
-  if (visiblePage) {
-    // Get the page index from the data attribute.
-    const pageIndex = parseInt(visiblePage.dataset.pageIndex, 10);
+  // Make sure we have a valid page index.
+  if (pageIndex >= 0 && pageIndex < displayArea.children.length) {
     const totalPages = Math.ceil(wordList.length / wordsPerPage);
     
     // Calculate normalized position (0 to 1).
@@ -293,6 +269,9 @@ function initializeInterface() {
   // Create letter dividers.
   createLetterDividers();
   
+  // Load all pages at once.
+  loadAllPages();
+  
   // Initialize the display with the slider at position 0.
   setSliderPosition(0);
   
@@ -318,6 +297,11 @@ function initializeInterface() {
 window.addEventListener("resize", () => {
   rowsPerColumn = calculateRows();
   wordsPerPage = rowsPerColumn * 3;
+  
+  // Reload all pages with new dimensions.
+  loadAllPages();
+  
+  // Update scroll position based on current slider.
   updateDisplay(currentPosition);
   createLetterDividers();
 });
