@@ -230,22 +230,25 @@ function syncSliderWithScroll() {
   
   // Calculate which page is in the middle of the display area.
   const pageIndex = Math.floor((displayArea.scrollTop + (displayArea.offsetHeight / 2)) / pageHeight);
-  
   // Make sure we have a valid page index.
   if (pageIndex >= 0 && pageIndex < displayArea.children.length) {
     // Update which pages are populated based on the new visible page.
     updateVisiblePages(pageIndex);
     
-    const totalPages = Math.ceil(wordList.length / wordsPerPage);
-    
-    // Calculate normalized position (0 to 1).
-    const normalizedPosition = pageIndex / (totalPages === 1 ? 1 : totalPages - 1);
-    
-    // Convert to slider position.
-    const newPosition = normalizedPosition * (sliderWidth - handleWidth);
-    
-    // Update slider without triggering display update to avoid feedback loop.
-    setSliderPosition(newPosition, false);
+    // Only update slider position if the user is not currently dragging it.
+    // This prevents the scroll tab from jumping during drag operations.
+    if (!isDragging) {
+      const totalPages = Math.ceil(wordList.length / wordsPerPage);
+      
+      // Calculate normalized position (0 to 1).
+      const normalizedPosition = pageIndex / (totalPages === 1 ? 1 : totalPages - 1);
+      
+      // Convert to slider position.
+      const newPosition = normalizedPosition * (sliderWidth - handleWidth);
+      
+      // Update slider without triggering display update to avoid feedback loop.
+      setSliderPosition(newPosition, false);
+    }
   }
 }
 
