@@ -13,7 +13,7 @@ fetch("/46k_words.json")
     wordList = data;
 
     // XXX
-    wordList.length = 1000;
+    // wordList.length = 1000;
 
     initializeInterface();
   })
@@ -116,10 +116,11 @@ let currentVisiblePageIndex = 0;
 /**
  * Updates which pages are populated based on the current visible page.
  * @param {number} newVisiblePageIndex - The new visible page index.
+ * @param {boolean} [force=false] - Whether to force update even if the index hasn't changed.
  */
-function updateVisiblePages(newVisiblePageIndex) {
-  // Skip if nothing changed.
-  if (newVisiblePageIndex === currentVisiblePageIndex) {
+function updateVisiblePages(newVisiblePageIndex, force = false) {
+  // Skip if nothing changed and not forcing update.
+  if (newVisiblePageIndex === currentVisiblePageIndex && !force) {
     return;
   }
   
@@ -173,7 +174,8 @@ function loadAllPages() {
   currentVisiblePageIndex = 0;
   
   // Populate only the first page and possibly the second page.
-  updateVisiblePages(currentVisiblePageIndex);
+  // Force update even though the index hasn't changed.
+  updateVisiblePages(currentVisiblePageIndex, true);
 }
 
 /**
