@@ -107,9 +107,10 @@ body {
 .page-container {
     display: flex;
     scroll-snap-align: start;
-    scroll-snap-stop: always;
-    min-height: 350px;
+    /* scroll-snap-stop: always; */
+    height: 350px;
     width: 100%;
+    border-bottom: 1px solid #efe5dc;
 }
 
 .word-column {

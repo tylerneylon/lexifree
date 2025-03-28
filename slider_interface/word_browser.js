@@ -11,6 +11,10 @@ fetch("/46k_words.json")
   })
   .then((data) => {
     wordList = data;
+
+    // XXX
+    wordList.length = 1000;
+
     initializeInterface();
   })
   .catch((error) => {
@@ -42,65 +46,134 @@ let wordsPerPage = rowsPerColumn * 3;
  */
 function calculateRows() {
   const displayHeight = displayArea.offsetHeight;
-  const wordItemHeight = 24;  // Approximate height of each word item in pixels.
+  const wordItemHeight = 26;  // Approximate height of each word item in pixels.
   return Math.floor(displayHeight / wordItemHeight);
 }
 
 /**
- * Creates a page of words with three columns.
+ * Creates an empty page container that serves as a placeholder.
  * @param {number} pageIndex - The index of the page to create.
- * @returns {HTMLElement} - The created page container.
+ * @returns {HTMLElement} - The created empty page container.
  */
-function createPage(pageIndex) {
+function createEmptyPage(pageIndex) {
   const pageContainer = document.createElement("div");
   pageContainer.className = "page-container";
+  pageContainer.dataset.pageIndex = pageIndex;
+  
+  // Set height to ensure proper scrolling dimensions.
+  pageContainer.style.height = "350px";
+  
+  return pageContainer;
+}
+
+/**
+ * Populates a page with content including columns and words.
+ * @param {HTMLElement} pageContainer - The page container to populate.
+ * @param {number} pageIndex - The index of the page to populate.
+ */
+function populatePage(pageContainer, pageIndex) {
+  // Skip if already populated.
+  if (pageContainer.children.length > 0) {
+    return;
+  }
   
   // Calculate the starting index for this page.
   const startIndex = pageIndex * wordsPerPage;
   
   // Create three columns for the page.
-  const pageCols = [0, 1, 2].map(() => {
+  for (let colIndex = 0; colIndex < 3; colIndex++) {
     const col = document.createElement("div");
     col.className = "word-column";
-    return col;
-  });
-  
-  // Populate each column with words.
-  for (let i = 0; i < rowsPerColumn; i++) {
-    // Add words to each of the three columns.
-    for (let colIndex = 0; colIndex < 3; colIndex++) {
+    
+    // Populate column with words.
+    for (let i = 0; i < rowsPerColumn; i++) {
       const wordIndex = startIndex + colIndex * rowsPerColumn + i;
       
       if (wordIndex < wordList.length) {
         const wordItem = document.createElement("div");
         wordItem.className = "word-item";
         wordItem.textContent = wordList[wordIndex];
-        pageCols[colIndex].appendChild(wordItem);
+        col.appendChild(wordItem);
       }
     }
+    
+    pageContainer.appendChild(col);
   }
-  
-  // Add all columns to the page container.
-  pageCols.forEach(col => pageContainer.appendChild(col));
-  
-  return pageContainer;
 }
 
 /**
- * Initial load of all word pages at once.
+ * Clears the content of a page by removing all its children.
+ * @param {HTMLElement} pageContainer - The page container to clear.
+ */
+function clearPage(pageContainer) {
+  // Use replaceChildren() to remove all children (more modern approach).
+  pageContainer.replaceChildren();
+}
+
+// Track the currently visible page index.
+let currentVisiblePageIndex = 0;
+
+/**
+ * Updates which pages are populated based on the current visible page.
+ * @param {number} newVisiblePageIndex - The new visible page index.
+ */
+function updateVisiblePages(newVisiblePageIndex) {
+  // Skip if nothing changed.
+  if (newVisiblePageIndex === currentVisiblePageIndex) {
+    return;
+  }
+  
+  const totalPages = Math.ceil(wordList.length / wordsPerPage);
+  
+  // Only check the 5 pages surrounding the new visible page.
+  for (let i = newVisiblePageIndex - 2; i <= newVisiblePageIndex + 2; i++) {
+    // Skip invalid page indices.
+    if (i < 0 || i >= totalPages) {
+      continue;
+    }
+    
+    // Access the page directly by index.
+    const page = displayArea.children[i];
+    if (!page) continue;
+    
+    // Determine if this page should be populated.
+    const shouldBePopulated = Math.abs(i - newVisiblePageIndex) <= 1;
+    
+    if (shouldBePopulated && page.children.length === 0) {
+      // Populate page if it's the visible page or a direct neighbor.
+      populatePage(page, i);
+    } else if (!shouldBePopulated && page.children.length > 0) {
+      // Clear page if it's outside the visible range.
+      clearPage(page);
+    }
+  }
+  
+  // Update the current visible page index.
+  currentVisiblePageIndex = newVisiblePageIndex;
+}
+
+/**
+ * Creates all empty page placeholders and populates only the initial visible pages.
  */
 function loadAllPages() {
   // Clear the display area.
-  displayArea.innerHTML = "";
+  while (displayArea.firstChild) {
+    displayArea.removeChild(displayArea.firstChild);
+  }
+  
   const totalPages = Math.ceil(wordList.length / wordsPerPage);
   
-  // Create and add all pages to the display area.
+  // Create and add all empty page placeholders to the display area.
   for (let i = 0; i < totalPages; i++) {
-    const page = createPage(i);
-    // Store the page index as a data attribute.
-    page.dataset.pageIndex = i;
+    const page = createEmptyPage(i);
     displayArea.appendChild(page);
   }
+  
+  // Initialize the visible page index.
+  currentVisiblePageIndex = 0;
+  
+  // Populate only the first page and possibly the second page.
+  updateVisiblePages(currentVisiblePageIndex);
 }
 
 /**
@@ -116,8 +189,11 @@ function updateDisplay(position) {
   let pageIndex = Math.floor(normalizedPosition * totalPages);
   if (pageIndex >= totalPages) pageIndex = totalPages - 1;
   
-  // Find the target page element.
-  const targetPage = displayArea.querySelector(`.page-container[data-page-index="${pageIndex}"]`);
+  // Update which pages are populated based on the new visible page.
+  updateVisiblePages(pageIndex);
+  
+  // Get the target page directly by index.
+  const targetPage = displayArea.children[pageIndex];
   
   if (targetPage) {
     // Scroll to the target page without smooth behavior.
@@ -142,7 +218,7 @@ function setSliderPosition(x, updateWords = true) {
 }
 
 /**
- * Sync slider position with the currently visible page.
+ * Sync slider position with the currently visible page and update page content.
  */
 function syncSliderWithScroll() {
   if (displayArea.children.length === 0) return;
@@ -155,6 +231,9 @@ function syncSliderWithScroll() {
   
   // Make sure we have a valid page index.
   if (pageIndex >= 0 && pageIndex < displayArea.children.length) {
+    // Update which pages are populated based on the new visible page.
+    updateVisiblePages(pageIndex);
+    
     const totalPages = Math.ceil(wordList.length / wordsPerPage);
     
     // Calculate normalized position (0 to 1).
@@ -298,11 +377,16 @@ window.addEventListener("resize", () => {
   rowsPerColumn = calculateRows();
   wordsPerPage = rowsPerColumn * 3;
   
+  // Remember the current visible page index.
+  const currentPage = currentVisiblePageIndex;
+  
   // Reload all pages with new dimensions.
   loadAllPages();
   
   // Update scroll position based on current slider.
   updateDisplay(currentPosition);
+  
+  // Update letter dividers.
   createLetterDividers();
 });
 
