@@ -1,5 +1,20 @@
 // This array stores all dictionary words loaded from the server.
 let wordList = [];
+let fontLoaded = false;
+let wordsLoaded = false;
+
+// This function initializes the interface once all resources are loaded.
+function checkAllLoaded() {
+  if (fontLoaded && wordsLoaded) {
+    initializeInterface();
+  }
+}
+
+// This sets up a font loading observer to track when fonts are ready.
+document.fonts.ready.then(() => {
+  fontLoaded = true;
+  checkAllLoaded();
+});
 
 // Fetch words from the server when the page loads.
 fetch("/46k_words.json")
@@ -11,11 +26,8 @@ fetch("/46k_words.json")
   })
   .then((data) => {
     wordList = data;
-
-    // XXX
-    // wordList.length = 1000;
-
-    initializeInterface();
+    wordsLoaded = true;
+    checkAllLoaded();
   })
   .catch((error) => {
     console.error("Error loading words:", error);

@@ -1,5 +1,5 @@
 body {
-    font-family: 'Georgia', serif;
+    font-family: 'DM Sans', sans-serif;
     background-color: #283C86;
     color: #FFFCEB;
     max-width: 800px;
@@ -52,7 +52,7 @@ body {
 }
 
 .letter-marker {
-    font-weight: bold;
+    font-weight: 700;
     color: #FFFCEB;
     flex-shrink: 0;
     width: 15px;
@@ -60,7 +60,6 @@ body {
 }
 
 .slider-handle {
-    position: absolute;
     width: 20px;
     height: 40px;
     background: linear-gradient(135deg, #34488C, #283C86);
@@ -131,6 +130,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 14px;
+    font-weight: 500;
     color: #FFFCEB;
 }
 
