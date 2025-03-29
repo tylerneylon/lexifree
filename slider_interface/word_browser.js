@@ -45,18 +45,35 @@ let measuredWordItemHeight = null;
 let verticalPadding = 0;
 
 /**
- * Determines if the current browser is Chrome.
- * @returns {bool} If the current browser is Chrome.
+ * Determines the current browser type.
+ * @returns {string} The current browser: 'chrome', 'firefox', 'safari', or 'other'.
  */
-function isChrome() {
+function getBrowser() {
   const ua = navigator.userAgent;
+  
+  // Check for Firefox.
+  if (ua.includes('Firefox') || ua.includes('FxiOS')) {
+    return 'firefox';
+  }
+  
+  // Check for Safari (must check before Chrome since Safari also includes 'Safari').
+  if ((ua.includes('Safari') && !ua.includes('Chrome')) || 
+      (ua.includes('AppleWebKit') && ua.includes('Mobile'))) {
+    return 'safari';
+  }
+  
+  // Check for Chrome and Chromium-based browsers that aren't Edge/Opera/Brave.
   const isChromium = ua.includes('Chrome') || ua.includes('CriOS');
-  const isEdge   = ua.includes('Edg');
-  const isOpera  = ua.includes('OPR');
-  const isBrave  = navigator.brave !== undefined;
-  const isSafari = ua.includes('Safari') && !ua.includes('Chrome');
-
-  return isChromium && !isEdge && !isOpera && !isBrave && !isSafari;
+  const isEdge = ua.includes('Edg');
+  const isOpera = ua.includes('OPR');
+  const isBrave = navigator.brave !== undefined;
+  
+  if (isChromium && !isEdge && !isOpera && !isBrave) {
+    return 'chrome';
+  }
+  
+  // Default for any other browser.
+  return 'other';
 }
 
 /**
@@ -434,7 +451,7 @@ function calculateVerticalPadding() {
 let scrollSnapTimer = null;
 
 /**
- * On Chrome, temporarily disables scroll snapping for smooth wheel scrolling.
+ * Breifly suspend scroll snapping.
  */
 function disableScrollSnap() {
   displayArea.style.scrollSnapType = "none";
@@ -481,12 +498,13 @@ function initializeInterface() {
   displayArea.addEventListener("wheel", (e) => {
 
     // Only apply special mouse wheel behavior on Chrome.
-    // This is because the default mouse wheel behavior on Chrome is weird
-    // when css-based snapping is used.
-    if (!isChrome()) return;
+    // This is because the default mouse wheel behavior on Chrome is
+    // weird when css-based snapping is used.
+    const browser = getBrowser();
+    if (browser !== 'chrome') return;
 
     // Detect if this is a trackpad or a mouse wheel.
-    const isTrackpad = (e.wheelDeltaY === -3 * e.deltaY);
+    let isTrackpad = (e.wheelDeltaY === -3 * e.deltaY);
     if (!isTrackpad) disableScrollSnap();
   });
   
