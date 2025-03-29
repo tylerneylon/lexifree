@@ -1,7 +1,7 @@
 body {
     font-family: 'Georgia', serif;
-    background-color: #f8f4e5;
-    color: #5d4037;
+    background-color: #283C86;
+    color: #FFFCEB;
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
@@ -25,10 +25,10 @@ body {
     position: relative;
     width: 600px; /* Same width as display area */
     height: 50px;
-    background: linear-gradient(to bottom, #d7ccc8, #bcaaa4);
+    background-color: #495B96;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    border: 1px solid #a1887f;
+    border: 1px solid #34488C;
     margin: 0 10px; /* Space for letters on either side */
     overflow: hidden;
 }
@@ -53,7 +53,7 @@ body {
 
 .letter-marker {
     font-weight: bold;
-    color: #4e342e;
+    color: #FFFCEB;
     flex-shrink: 0;
     width: 15px;
     text-align: center;
@@ -63,12 +63,12 @@ body {
     position: absolute;
     width: 20px;
     height: 40px;
-    background: linear-gradient(135deg, #8d6e63, #5d4037);
+    background: linear-gradient(135deg, #34488C, #283C86);
     top: 5px;
     border-radius: 4px;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.2);
-    border: 1px solid #4e342e;
+    border: 1px solid #283C86;
     user-select: none;
     touch-action: none;
     position: relative; /* For positioning the center line */
@@ -88,12 +88,12 @@ body {
 .display-area {
     width: 600px;
     height: 350px;
-    background-color: #fff;
+    background-color: #34488C;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     overflow-y: auto;
     overflow-x: hidden;
-    border: 1px solid #d7ccc8;
+    border: 1px solid #283C86;
     scroll-snap-type: y mandatory;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
@@ -110,14 +110,14 @@ body {
     /* scroll-snap-stop: always; */
     height: 350px;
     width: 100%;
-    border-bottom: 1px solid #efe5dc;
+    border-bottom: 1px solid rgba(255, 252, 235, 0.1);
 }
 
 .word-column {
     flex: 1;
     padding: 10px;
     overflow: hidden;
-    border-right: 1px solid #efe5dc;
+    border-right: 1px solid rgba(255, 252, 235, 0.1);
 }
 
 .word-column:last-child {
@@ -131,12 +131,12 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 14px;
-    color: #5d4037;
+    color: #FFFCEB;
 }
 
 .title {
     text-align: center;
-    color: #3e2723;
+    color: #FFFCEB;
     margin-bottom: 20px;
     font-size: 24px;
 }
