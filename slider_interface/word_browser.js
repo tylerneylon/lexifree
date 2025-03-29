@@ -45,6 +45,21 @@ let measuredWordItemHeight = null;
 let verticalPadding = 0;
 
 /**
+ * Determines if the current browser is Chrome.
+ * @returns {bool} If the current browser is Chrome.
+ */
+function isChrome() {
+  const ua = navigator.userAgent;
+  const isChromium = ua.includes('Chrome') || ua.includes('CriOS');
+  const isEdge   = ua.includes('Edg');
+  const isOpera  = ua.includes('OPR');
+  const isBrave  = navigator.brave !== undefined;
+  const isSafari = ua.includes('Safari') && !ua.includes('Chrome');
+
+  return isChromium && !isEdge && !isOpera && !isBrave && !isSafari;
+}
+
+/**
  * Measures the actual height of a word item in the DOM.
  * @returns {number} The measured height of a word item in pixels.
  */
@@ -232,6 +247,15 @@ function loadAllPages() {
  * @param {number} position - The current slider position in pixels.
  */
 function updateDisplay(position) {
+  // Ensure scroll snapping is enabled when using the slider.
+  displayArea.style.scrollSnapType = "y mandatory";
+  
+  // Clear any pending timer for disabling snap
+  if (scrollSnapTimer) {
+    clearTimeout(scrollSnapTimer);
+    scrollSnapTimer = null;
+  }
+  
   // Normalize the position to a value between 0 and 1.
   const normalizedPosition = position / (sliderWidth - handleWidth);
   const totalPages = Math.ceil(wordList.length / wordsPerPage);
@@ -406,6 +430,27 @@ function calculateVerticalPadding() {
   return Math.floor(totalPadding / 2);
 }
 
+// Timer for re-enabling scroll snap after wheel events.
+let scrollSnapTimer = null;
+
+/**
+ * On Chrome, temporarily disables scroll snapping for smooth wheel scrolling.
+ */
+function disableScrollSnap() {
+  displayArea.style.scrollSnapType = "none";
+  
+  // Clear any existing timer.
+  if (scrollSnapTimer) {
+    clearTimeout(scrollSnapTimer);
+  }
+  
+  // Set a timer to re-enable scroll snap after scrolling stops.
+  scrollSnapTimer = setTimeout(() => {
+    displayArea.style.scrollSnapType = "y mandatory";
+    scrollSnapTimer = null;
+  }, 120); // Wait 120ms after scrolling stops.
+}
+
 /**
  * Sets up the interface after words are loaded.
  */
@@ -430,6 +475,19 @@ function initializeInterface() {
   displayArea.addEventListener("scroll", () => {
     // Use requestAnimationFrame to optimize performance.
     requestAnimationFrame(syncSliderWithScroll);
+  });
+  
+  // Add wheel event listener to temporarily disable scroll snapping.
+  displayArea.addEventListener("wheel", (e) => {
+
+    // Only apply special mouse wheel behavior on Chrome.
+    // This is because the default mouse wheel behavior on Chrome is weird
+    // when css-based snapping is used.
+    if (!isChrome()) return;
+
+    // Detect if this is a trackpad or a mouse wheel.
+    const isTrackpad = (e.wheelDeltaY === -3 * e.deltaY);
+    if (!isTrackpad) disableScrollSnap();
   });
   
   // Handle window resize events to maintain proper slider proportions.
