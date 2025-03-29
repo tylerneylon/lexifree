@@ -37,8 +37,48 @@ const handleWidth = sliderHandle.offsetWidth;
 let isDragging = false;
 let startX = 0;
 let currentPosition = 0;
-let rowsPerColumn = calculateRows();
-let wordsPerPage = rowsPerColumn * 3;
+let rowsPerColumn = 0;
+let wordsPerPage = 0;
+
+// Store measurements once we determine them.
+let measuredWordItemHeight = null;
+let verticalPadding = 0;
+
+/**
+ * Measures the actual height of a word item in the DOM.
+ * @returns {number} The measured height of a word item in pixels.
+ */
+function measureWordItemHeight() {
+  // If we've already measured, return the cached value.
+  if (measuredWordItemHeight !== null) {
+    return measuredWordItemHeight;
+  }
+  
+  // Create a temporary container.
+  const tempContainer = document.createElement("div");
+  tempContainer.style.visibility = "hidden";
+  tempContainer.style.position = "absolute";
+  document.body.appendChild(tempContainer);
+  
+  // Create a temporary word column.
+  const tempColumn = document.createElement("div");
+  tempColumn.className = "word-column";
+  tempContainer.appendChild(tempColumn);
+  
+  // Create a single word item to measure.
+  const wordItem = document.createElement("div");
+  wordItem.className = "word-item";
+  wordItem.textContent = wordList[0] || "Sample";
+  tempColumn.appendChild(wordItem);
+  
+  // Measure the height.
+  measuredWordItemHeight = wordItem.offsetHeight;
+  
+  // Clean up.
+  document.body.removeChild(tempContainer);
+  
+  return measuredWordItemHeight;
+}
 
 /**
  * Calculates how many rows of words can fit in each column.
@@ -46,8 +86,13 @@ let wordsPerPage = rowsPerColumn * 3;
  */
 function calculateRows() {
   const displayHeight = displayArea.offsetHeight;
-  const wordItemHeight = 26;  // Approximate height of each word item in pixels.
-  return Math.floor(displayHeight / wordItemHeight);
+  const wordItemHeight = measureWordItemHeight();
+  const columnPadding = 20; // 10px padding top + 10px padding bottom
+  
+  // Calculate available height for words after accounting for padding
+  const availableHeight = displayHeight - columnPadding;
+  
+  return Math.floor(availableHeight / wordItemHeight);
 }
 
 /**
@@ -84,6 +129,10 @@ function populatePage(pageContainer, pageIndex) {
   for (let colIndex = 0; colIndex < 3; colIndex++) {
     const col = document.createElement("div");
     col.className = "word-column";
+    
+    // Apply equal padding to top and bottom for vertical centering.
+    col.style.paddingTop = `${verticalPadding}px`;
+    col.style.paddingBottom = `${verticalPadding}px`;
     
     // Populate column with words.
     for (let i = 0; i < rowsPerColumn; i++) {
@@ -347,9 +396,27 @@ function createLetterDividers() {
 }
 
 /**
+ * Calculates the vertical padding for centering content.
+ */
+function calculateVerticalPadding() {
+  const displayHeight = displayArea.offsetHeight;
+  const wordItemHeight = measureWordItemHeight();
+  const contentHeight = rowsPerColumn * wordItemHeight;
+  const totalPadding = Math.max(0, displayHeight - contentHeight);
+  return Math.floor(totalPadding / 2);
+}
+
+/**
  * Sets up the interface after words are loaded.
  */
 function initializeInterface() {
+  // Calculate rows and words per page based on measured item height.
+  rowsPerColumn = calculateRows();
+  wordsPerPage = rowsPerColumn * 3;
+  
+  // Calculate vertical padding for centering.
+  verticalPadding = calculateVerticalPadding();
+  
   // Create letter dividers.
   createLetterDividers();
   
@@ -379,8 +446,12 @@ function initializeInterface() {
 
 // Update the display upon window resizes.
 window.addEventListener("resize", () => {
+  // Recalculate rows and words per page.
   rowsPerColumn = calculateRows();
   wordsPerPage = rowsPerColumn * 3;
+  
+  // Recalculate vertical padding for centering.
+  verticalPadding = calculateVerticalPadding();
   
   // Remember the current visible page index.
   const currentPage = currentVisiblePageIndex;
