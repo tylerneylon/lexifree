@@ -24,7 +24,7 @@ body {
 .slider-container {
     position: relative;
     width: 600px; /* Same width as display area */
-    height: 50px;
+    height: 40px;
     background-color: #E9E9E2;
     border-radius: 8px;
     box-shadow: none;
