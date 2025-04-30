@@ -10,10 +10,17 @@ function checkAllLoaded() {
   }
 }
 
-// This sets up a font loading observer to track when fonts are ready.
-document.fonts.ready.then(() => {
-  fontLoaded = true;
-  checkAllLoaded();
+// This sets up a font loading observer to track when all fonts are ready.
+// Carefully ensure that DM Serif Text is fully loaded before proceeding.
+Promise.all([
+  document.fonts.ready,
+  document.fonts.load('16px "DM Serif Text"')
+]).then(() => {
+  // Add a small delay to ensure fonts are fully processed by the browser.
+  setTimeout(() => {
+    fontLoaded = true;
+    checkAllLoaded();
+  }, 100);
 });
 
 // Fetch words from the server when the page loads.
