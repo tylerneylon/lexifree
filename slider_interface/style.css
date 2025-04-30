@@ -28,7 +28,7 @@ body {
     background-color: #E9E9E2;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border: 1px solid #283B86;
+    border: none;
     margin: 0 10px; /* Space for letters on either side */
     overflow: hidden;
 }
