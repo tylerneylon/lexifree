@@ -27,7 +27,7 @@ body {
     height: 50px;
     background-color: #E9E9E2;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: none;
     border: none;
     margin: 0 10px; /* Space for letters on either side */
     overflow: hidden;
@@ -61,10 +61,9 @@ body {
 
 .slider-handle {
     width: 20px;
-    height: 40px;
-    background-color: rgba(40, 59, 134, 0.5);
-    top: 5px;
-    border-radius: 10px;
+    height: 100%;
+    background-color: rgba(40, 59, 134, 0.7);
+    border-radius: 8px;
     cursor: pointer;
     box-shadow: none;
     border: none;
@@ -89,7 +88,7 @@ body {
     height: 350px;
     background-color: #E0E1DE;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: none;
     overflow-y: auto;
     overflow-x: hidden;
     border: 1px solid #283B86;
