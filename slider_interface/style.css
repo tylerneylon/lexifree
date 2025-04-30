@@ -62,12 +62,12 @@ body {
 .slider-handle {
     width: 20px;
     height: 40px;
-    background: linear-gradient(135deg, #4257A2, #283B86);
+    background-color: rgba(40, 59, 134, 0.5);
     top: 5px;
-    border-radius: 4px;
+    border-radius: 10px;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.2);
-    border: 1px solid #283B86;
+    box-shadow: none;
+    border: none;
     user-select: none;
     touch-action: none;
     position: relative; /* For positioning the center line */
@@ -76,11 +76,11 @@ body {
 .slider-handle::after {
     content: '';
     position: absolute;
-    top: 5px;
-    bottom: 5px;
+    top: 10px;
+    bottom: 10px;
     left: 50%;
-    width: 1px;
-    background-color: rgba(255, 255, 255, 0.5);
+    width: 2px;
+    background-color: rgba(255, 255, 255, 0.7);
     transform: translateX(-50%);
 }
 
@@ -125,14 +125,15 @@ body {
 }
 
 .word-item {
-    padding: 5px 3px;
+    padding: 6px 3px;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 500;
     color: #283B86;
+    letter-spacing: 0.3px;
 }
 
 .title {
