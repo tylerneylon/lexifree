@@ -1,7 +1,7 @@
 body {
     font-family: 'DM Sans', sans-serif;
-    background-color: #283C86;
-    color: #FFFCEB;
+    background-color: #FFFCED;
+    color: #283B86;
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
@@ -25,10 +25,10 @@ body {
     position: relative;
     width: 600px; /* Same width as display area */
     height: 50px;
-    background-color: #495B96;
+    background-color: #E9E9E2;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    border: 1px solid #34488C;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #283B86;
     margin: 0 10px; /* Space for letters on either side */
     overflow: hidden;
 }
@@ -47,13 +47,13 @@ body {
     top: 0;
     bottom: 0;
     width: 1px;
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(40, 59, 134, 0.2);
     height: 100%;
 }
 
 .letter-marker {
     font-weight: 700;
-    color: #FFFCEB;
+    color: #283B86;
     flex-shrink: 0;
     width: 15px;
     text-align: center;
@@ -62,12 +62,12 @@ body {
 .slider-handle {
     width: 20px;
     height: 40px;
-    background: linear-gradient(135deg, #34488C, #283C86);
+    background: linear-gradient(135deg, #4257A2, #283B86);
     top: 5px;
     border-radius: 4px;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.2);
-    border: 1px solid #283C86;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.2);
+    border: 1px solid #283B86;
     user-select: none;
     touch-action: none;
     position: relative; /* For positioning the center line */
@@ -80,19 +80,19 @@ body {
     bottom: 5px;
     left: 50%;
     width: 1px;
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.5);
     transform: translateX(-50%);
 }
 
 .display-area {
     width: 600px;
     height: 350px;
-    background-color: #34488C;
+    background-color: #E0E1DE;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     overflow-y: auto;
     overflow-x: hidden;
-    border: 1px solid #283C86;
+    border: 1px solid #283B86;
     scroll-snap-type: y mandatory;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
@@ -109,14 +109,15 @@ body {
     /* scroll-snap-stop: always; */
     height: 350px;
     width: 100%;
-    border-bottom: 1px solid rgba(255, 252, 235, 0.1);
+    border-bottom: 1px solid rgba(40, 59, 134, 0.1);
+    background-color: #E0E1DE;
 }
 
 .word-column {
     flex: 1;
     padding: 10px;
     overflow: hidden;
-    border-right: 1px solid rgba(255, 252, 235, 0.1);
+    border-right: 1px solid rgba(40, 59, 134, 0.1);
 }
 
 .word-column:last-child {
@@ -131,12 +132,12 @@ body {
     text-overflow: ellipsis;
     font-size: 14px;
     font-weight: 500;
-    color: #FFFCEB;
+    color: #283B86;
 }
 
 .title {
     text-align: center;
-    color: #FFFCEB;
+    color: #283B86;
     margin-bottom: 20px;
     font-size: 24px;
 }
