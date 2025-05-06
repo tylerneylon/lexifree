@@ -42,6 +42,17 @@ body {
     pointer-events: none; /* Allow clicks to pass through to the slider */
 }
 
+.slider-letter-overlay {
+    position: absolute;
+    font-weight: 700;
+    color: #283B86;
+    font-family: 'DM Sans', sans-serif;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
 .letter-divider {
     position: absolute;
     top: 0;
@@ -69,7 +80,8 @@ body {
     border: none;
     user-select: none;
     touch-action: none;
-    position: relative; /* For positioning the center line */
+    position: relative; /* This is for positioning the center line. */
+    z-index: 1; /* This ensures the handle appears above letter overlays. */
 }
 
 .slider-handle::after {

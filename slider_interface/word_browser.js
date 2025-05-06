@@ -63,6 +63,12 @@ let wordsPerPage = 0;
 let measuredWordItemHeight = null;
 let verticalPadding = 0;
 
+// Store which letters can fit in the scroll bar without overlapping tick marks.
+let lettersFitArray = [];
+
+// This variable holds references to active letter overlays.
+let activeLetterOverlays = [];
+
 /**
  * Determines the current browser type.
  * @returns {string} The current browser: 'chrome', 'firefox', 'safari', or 'other'.
@@ -279,6 +285,95 @@ function loadAllPages() {
 }
 
 /**
+ * Shows or hides letter overlays based on the current page index.
+ * @param {number} pageIndex - The index of the currently visible page.
+ */
+function updateLetterOverlays(pageIndex) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  
+  // Get the first word on the current page.
+  const startWordIndex = pageIndex * wordsPerPage;
+  if (startWordIndex >= wordList.length) return;
+  
+  const currentWord = wordList[startWordIndex];
+  const currentLetter = currentWord.charAt(0).toUpperCase();
+  
+  // Convert letter to index.
+  const currentIndex = alphabet.indexOf(currentLetter);
+  if (currentIndex === -1) return;
+  
+  // Clear any existing overlays.
+  for (const overlay of activeLetterOverlays) {
+    sliderContainer.removeChild(overlay);
+  }
+  activeLetterOverlays = [];
+  
+  // Create overlays for current letter and neighbors.
+  const lettersToShow = [];
+  if (currentIndex > 0) {
+    lettersToShow.push({letter: alphabet[currentIndex - 1], index: currentIndex - 1});
+  }
+  lettersToShow.push({letter: currentLetter, index: currentIndex});
+  if (currentIndex < alphabet.length - 1) {
+    lettersToShow.push({letter: alphabet[currentIndex + 1], index: currentIndex + 1});
+  }
+  
+  // Create and position each letter overlay.
+  for (const item of lettersToShow) {
+    // Check if this letter can fit.
+    if (!lettersFitArray[item.index]) {
+      continue;
+    }
+    
+    // Get the divider positions for this letter's section.
+    // We need the divider positions in the pixel space of the slider.
+    const leftDividerIndex = item.index;
+    const rightDividerIndex = item.index + 1;
+    
+    // Find the first occurrence indices for calculating divider positions.
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const letterIndices = {};
+    
+    // Initialize letter indices.
+    for (let i = 0; i < alphabet.length; i++) {
+      letterIndices[alphabet[i]] = -1;
+    }
+    
+    // Find the first occurrence of each letter.
+    for (let i = 0; i < wordList.length; i++) {
+      const firstChar = wordList[i].charAt(0).toUpperCase();
+      if (alphabet.includes(firstChar) && letterIndices[firstChar] === -1) {
+        letterIndices[firstChar] = i;
+      }
+    }
+    
+    // Calculate divider positions.
+    const availableWidth = sliderWidth - handleWidth;
+    const leftPosition = leftDividerIndex === 0 ? 0 : 
+                         (letterIndices[alphabet[leftDividerIndex]] / wordList.length * availableWidth);
+    const rightPosition = rightDividerIndex >= alphabet.length ? availableWidth : 
+                          (letterIndices[alphabet[rightDividerIndex]] / wordList.length * availableWidth);
+    
+    // Position the letter in the middle between dividers.
+    const position = (leftPosition + rightPosition) / 2;
+    
+    // Create the overlay element.
+    const overlay = document.createElement('div');
+    overlay.className = 'slider-letter-overlay';
+    overlay.textContent = item.letter;
+    overlay.style.top = '50%';
+    overlay.style.left = `${position + handleWidth / 2}px`;
+    overlay.style.transform = 'translate(-50%, -50%)';
+    
+    // The current letter is fully opaque, neighbors are semi-transparent.
+    overlay.style.opacity = item.letter === currentLetter ? '1' : '0.6';
+    
+    sliderContainer.appendChild(overlay);
+    activeLetterOverlays.push(overlay);
+  }
+}
+
+/**
  * Updates the displayed words based on the slider position.
  * @param {number} position - The current slider position in pixels.
  */
@@ -286,7 +381,7 @@ function updateDisplay(position) {
   // Ensure scroll snapping is enabled when using the slider.
   displayArea.style.scrollSnapType = "y mandatory";
   
-  // Clear any pending timer for disabling snap
+  // Clear any pending timer for disabling snap.
   if (scrollSnapTimer) {
     clearTimeout(scrollSnapTimer);
     scrollSnapTimer = null;
@@ -309,6 +404,11 @@ function updateDisplay(position) {
   if (targetPage) {
     // Scroll to the target page without smooth behavior.
     targetPage.scrollIntoView({ behavior: 'auto', block: 'start' });
+  }
+  
+  // Update letter overlays if dragging.
+  if (isDragging) {
+    updateLetterOverlays(pageIndex);
   }
 }
 
@@ -374,12 +474,26 @@ function onMouseMove(e) {
 }
 
 /**
+ * Clears all active letter overlays.
+ */
+function clearLetterOverlays() {
+  // Remove all letter overlays from the DOM.
+  for (const overlay of activeLetterOverlays) {
+    sliderContainer.removeChild(overlay);
+  }
+  activeLetterOverlays = [];
+}
+
+/**
  * Handles the end of a mouse drag operation.
  */
 function onMouseUp() {
   isDragging = false;
   document.removeEventListener("mousemove", onMouseMove);
   document.removeEventListener("mouseup", onMouseUp);
+  
+  // Clear letter overlays when dragging ends.
+  clearLetterOverlays();
 }
 
 /**
@@ -402,6 +516,44 @@ function onTouchEnd() {
   isDragging = false;
   document.removeEventListener("touchmove", onTouchMove);
   document.removeEventListener("touchend", onTouchEnd);
+  
+  // Clear letter overlays when touch interaction ends.
+  clearLetterOverlays();
+}
+
+/**
+ * Calculates whether letters can fit between their corresponding dividers.
+ * @param {Array} dividerPositions - Array with positions of each letter divider.
+ * @returns {Array} - Boolean array indicating which letters fit.
+ */
+function calculateLetterFit(dividerPositions) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let lettersFit = new Array(26);
+  
+  // Get a reference to a letter marker to measure letter widths.
+  const letterMarkerStyle = window.getComputedStyle(document.querySelector('.letter-marker'));
+  const letterFont = `${letterMarkerStyle.fontWeight} ${letterMarkerStyle.fontSize} ${letterMarkerStyle.fontFamily}`;
+  
+  // Create a temporary canvas to measure text width.
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  context.font = letterFont;
+  
+  // For each letter, check if it fits in its section.
+  for (let i = 0; i < alphabet.length; i++) {
+    const letter = alphabet[i];
+    
+    // Measure letter width plus padding (2px on each side).
+    const letterWidth = context.measureText(letter).width + 4;
+    
+    // Calculate the available space between dividers.
+    const availableSpace = dividerPositions[i+1] - dividerPositions[i];
+    
+    // Letter fits if its width is less than available space.
+    lettersFit[i] = (letterWidth < availableSpace);
+  }
+  
+  return lettersFit;
 }
 
 /**
@@ -421,7 +573,7 @@ function createLetterDividers() {
   // Find the indices where each letter starts in the word list.
   const letterIndices = {};
   
-  // Initialize with -1 to indicate no words start with this letter.
+  // Initialize all letter indices
   for (let i = 0; i < alphabet.length; i++) {
     letterIndices[alphabet[i]] = -1;
   }
@@ -434,25 +586,32 @@ function createLetterDividers() {
     }
   }
   
-  // Create dividers for letter transitions.
+  // Create array of divider positions
+  const dividerPositions = new Array(27); // 26 letters plus the end position
+  dividerPositions[0] = 0; // Start position (for 'A')
+  
+  // Calculate divider positions for letters B through Z
   for (let i = 1; i < alphabet.length; i++) {
     const currentLetter = alphabet[i];
-    const prevLetter = alphabet[i-1];
     
-    // Skip if we don't have words that start with the current letter.
-    if (letterIndices[currentLetter] === -1) continue;
-    
-    // Calculate position based on word distribution.
+    // Calculate position based on word distribution
     const letterPosition = letterIndices[currentLetter] / wordList.length;
-    const position = letterPosition * availableWidth + handleWidth / 2;
+    dividerPositions[i] = letterPosition * availableWidth;
     
+    // Create divider element
     const divider = document.createElement("div");
     divider.className = "letter-divider";
-    divider.style.left = `${position}px`;
-    divider.title = `${prevLetter}-${currentLetter} transition`;
+    divider.style.left = `${dividerPositions[i] + handleWidth / 2}px`; // Add half handle width for visual positioning
+    divider.title = `${alphabet[i-1]}-${currentLetter} transition`;
     
     letterDividersContainer.appendChild(divider);
   }
+  
+  // Add the end position
+  dividerPositions[26] = availableWidth;
+  
+  // Calculate which letters will fit between their dividers
+  lettersFitArray = calculateLetterFit(dividerPositions);
 }
 
 /**
