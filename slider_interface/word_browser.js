@@ -448,8 +448,11 @@ function setSliderPosition(x, updateWords = true) {
 function syncSliderWithScroll() {
   if (displayArea.children.length === 0) return;
 
-  // Get the height of a page.
-  const pageHeight = displayArea.children[0].offsetHeight;
+  // Get the height of a page including margin.
+  const pageElem = displayArea.children[0];
+  const computedStyle = window.getComputedStyle(pageElem);
+  const marginBottom = parseInt(computedStyle.marginBottom, 10);
+  const pageHeight = pageElem.offsetHeight + marginBottom;
 
   // Calculate which page is in the middle of the display area.
   const pageIndex = Math.floor(
@@ -659,6 +662,7 @@ function disableScrollSnap() {
   }
 
   // Set a timer to re-enable scroll snap after scrolling stops.
+  return;  // XXX
   scrollSnapTimer = setTimeout(() => {
     displayArea.style.scrollSnapType = "y mandatory";
     scrollSnapTimer = null;
