@@ -140,16 +140,37 @@ function measureWordItemHeight() {
 }
 
 /**
+ * Measures the height of a page container element.
+ * @returns {number} The height of a page container in pixels.
+ */
+function measurePageContainerHeight() {
+  // Create a temporary page container to measure its height.
+  const tempContainer = document.createElement("div");
+  tempContainer.className = "page-container";
+  tempContainer.style.visibility = "hidden";
+  tempContainer.style.position = "absolute";
+  document.body.appendChild(tempContainer);
+  
+  // Get the height including border.
+  const pageHeight = tempContainer.offsetHeight;
+  
+  // Clean up.
+  document.body.removeChild(tempContainer);
+  
+  return pageHeight;
+}
+
+/**
  * Calculates how many rows of words can fit in each column.
  * @returns {number} The number of rows that fit in each column.
  */
 function calculateRows() {
-  const displayHeight = displayArea.offsetHeight;
+  const pageHeight = measurePageContainerHeight();
   const wordItemHeight = measureWordItemHeight();
   const columnPadding = 20; // 10px padding top + 10px padding bottom
 
-  // Calculate available height for words after accounting for padding
-  const availableHeight = displayHeight - columnPadding;
+  // Calculate available height for words after accounting for padding.
+  const availableHeight = pageHeight - columnPadding;
 
   return Math.floor(availableHeight / wordItemHeight);
 }
@@ -640,10 +661,10 @@ function createLetterDividers() {
  * Calculates the vertical padding for centering content.
  */
 function calculateVerticalPadding() {
-  const displayHeight = displayArea.offsetHeight;
+  const pageHeight = measurePageContainerHeight();
   const wordItemHeight = measureWordItemHeight();
   const contentHeight = rowsPerColumn * wordItemHeight;
-  const totalPadding = Math.max(0, displayHeight - contentHeight);
+  const totalPadding = Math.max(0, pageHeight - contentHeight);
   return Math.floor(totalPadding / 2);
 }
 
