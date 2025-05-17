@@ -468,6 +468,8 @@ def load_results(results_file):
     return test_file, results
 
 def make_eval_interface_html(test_file, results, static_page=False):
+    """ The argument static_page tells us whether or not this will be an
+        interactive page. """
 
     # Load in the word and definition data.
     gpt_data, gpt_errors, wiki_data = load_data(test_file)
@@ -475,6 +477,12 @@ def make_eval_interface_html(test_file, results, static_page=False):
     # Load in the html template.
     with open('templates/eval_results_template.html') as f:
         html = f.read()
+
+    # Add any style adjustments for static/interacive modes.
+    extra_styles = ''
+    if static_page == False:
+        extra_styles = '.taste-score { cursor: pointer; }'
+    html = html.replace('$EXTRA_STYLES$', extra_styles);
 
     # Keep or remove the event listeners according to static_page.
     if static_page:
