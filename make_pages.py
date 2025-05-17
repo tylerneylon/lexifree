@@ -200,7 +200,8 @@ if __name__ == '__main__':
     gpt_errors = {}
     base_word_of = {}  # base_word_of[derived] = base
     with open('entries.json') as f:
-        for line in f:
+        for i, line in enumerate(f):
+            # print(i + 1)  # This can be useful for debugging parse errors.
             data = json.loads(line)
             word = data['word']
             if 'error' in data:
