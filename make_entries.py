@@ -116,6 +116,13 @@ def get_bigrams(t):
 def are_texts_similar(t1, t2):
     bigrams1 = set(get_bigrams(t1))
     bigrams2 = set(get_bigrams(t2))
+
+    # This is an edge case where the right answer depends on context. In our
+    # case, I would consider very short strings to not be copyright-violation
+    # concerns, so I'll say they're not the same.
+    if len(bigrams1 | bigrams2) == 0:
+        return False
+
     similarity = len(bigrams1 & bigrams2) / len(bigrams1 | bigrams2)
     return similarity > JACCARD_SIMILARITY_CUTOFF
 
