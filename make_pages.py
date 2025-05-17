@@ -21,6 +21,7 @@
 
 import json
 from collections import defaultdict
+from pathlib import Path
 
 
 # ______________________________________________________________________
@@ -213,6 +214,9 @@ if __name__ == '__main__':
     # Load in the html template.
     with open('templates/definition_page_template.html') as f:
         html_template = f.read()
+
+    # Ensure the directory exists.
+    Path('html').mkdir(exist_ok=True)
 
     # Make all the pages.
     for word in gpt_data:
